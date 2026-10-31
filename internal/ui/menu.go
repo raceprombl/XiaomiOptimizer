@@ -76,27 +76,31 @@ func RenderBoxedMenu(m *Menu) {
 
 	fmt.Println(top)
 	titleLine := fmt.Sprintf(" %s%s%s", ColorBold, m.Title, ColorReset)
-	fmt.Println(ColorMiCyan + "║ " + PadRight(titleLine, innerWidth) + ColorMiCyan + " ║" + ColorReset)
+	fmt.Println(ColorMiCyan + "║ " + FitWidth(titleLine, innerWidth) + ColorMiCyan + " ║" + ColorReset)
 
 	if m.Subtitle != "" {
 		subLine := fmt.Sprintf(" %s%s%s", ColorGray, m.Subtitle, ColorReset)
-		fmt.Println(ColorMiCyan + "║ " + PadRight(subLine, innerWidth) + ColorMiCyan + " ║" + ColorReset)
+		fmt.Println(ColorMiCyan + "║ " + FitWidth(subLine, innerWidth) + ColorMiCyan + " ║" + ColorReset)
 	}
 	fmt.Println(mid)
 
 	for _, it := range m.Items {
-		var itemStr string
+		var keyColor string
 		if it.Key == "0" {
-			itemStr = fmt.Sprintf(" %s[%s]%s %s %-32s %s%s%s",
-				ColorRed, it.Key, ColorReset, it.Icon, it.Title, ColorGray, it.Description, ColorReset)
+			keyColor = ColorRed
 		} else if it.Key == "A" {
-			itemStr = fmt.Sprintf(" %s[%s]%s %s %-32s %s%s%s",
-				ColorYellow+ColorBold, it.Key, ColorReset, it.Icon, it.Title, ColorGray, it.Description, ColorReset)
+			keyColor = ColorYellow + ColorBold
 		} else {
-			itemStr = fmt.Sprintf(" %s[%s]%s %s %-32s %s%s%s",
-				ColorGreen, it.Key, ColorReset, it.Icon, it.Title, ColorGray, it.Description, ColorReset)
+			keyColor = ColorGreen
 		}
-		fmt.Println(ColorMiCyan + "║ " + PadRight(itemStr, innerWidth) + ColorMiCyan + " ║" + ColorReset)
+
+		keyPart := fmt.Sprintf("%s[%s]%s", keyColor, it.Key, ColorReset)
+		iconPart := FitWidth(it.Icon, 2)
+		titlePart := FitWidth(it.Title, 30)
+		descPart := FitWidth(it.Description, 38)
+
+		row := " " + keyPart + " " + iconPart + " " + titlePart + "  " + ColorGray + descPart + ColorReset
+		fmt.Println(ColorMiCyan + "║ " + FitWidth(row, innerWidth) + ColorMiCyan + " ║" + ColorReset)
 	}
 	fmt.Println(bot)
 	fmt.Println()
