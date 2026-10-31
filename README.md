@@ -9,6 +9,67 @@ XiOptimizer is a lightweight, dependency-free command-line debloater and system 
 
 No root access is required. All operations communicate directly via Android Debug Bridge (ADB) using non-destructive user partition overrides (`pm uninstall -k --user 0` and Android system settings).
 
+```text
+╔════════════════════════════════════════════════════════════════════════════════╗
+║                                                                                ║
+║  ██╗  ██╗██╗ ██████╗ ██████╗ ████████╗██╗███╗   ███╗██╗███████╗███████╗██████╗  ║
+║  ╚██╗██╔╝██║██╔═══██╗██╔══██╗╚══██╔══╝██║████╗ ████║██║╚══███╔╝██╔════╝██╔══██╗ ║
+║   ╚███╔╝ ██║██║   ██║██████╔╝   ██║   ██║██╔████╔██║██║  ███╔╝ █████╗  ██████╔╝ ║
+║   ██╔██╗ ██║██║   ██║██╔═══╝    ██║   ██║██║╚██╔╝██║██║ ███╔╝  ██╔══╝  ██╔══██╗ ║
+║  ██╔╝ ██╗██║╚██████╔╝██║        ██║   ██║██║ ╚═╝ ██║██║███████╗███████╗██║  ██║ ║
+║  ╚═╝  ╚═╝╚═╝ ╚═════╝ ╚═╝        ╚═╝   ╚═╝╚═╝     ╚═╝╚═╝╚══════╝╚══════╝╚═╝  ╚═╝ ║
+║                                                                                ║
+║                  ✦ HyperOS & MIUI 11 / 12 / 13 / 14 Optimizer ✦                 ║
+║                    Xiaomi • Redmi • POCO Debloater & Tweaker                   ║
+╚════════════════════════════════════════════════════════════════════════════════╝
+
+┌────────────────────────────────────────────────────────────────────────────────┐
+│ CONNECTED DEVICE INFORMATION                                                   │
+├─────────────────────────┬──────────────────────────────────────────────────────┤
+│ Model & Codename:       │ 24117RN76G (tanzanite_global)                        │
+│ Serial Number (SN):     │ nfirtoemmv7lfaca                                     │
+│ Android Version:        │ Android 16                                           │
+│ OS / ROM Version:       │ Xiaomi HyperOS 3.0 [OS3.0]                           │
+│ Battery Status:         │ 82% [Charging (+), 33.5°C]                           │
+│ ADB Connection:         │ USB Debugging Authorized [OK]                        │
+└─────────────────────────┴──────────────────────────────────────────────────────┘
+
+╔════════════════════════════════════════════════════════════════════════════════╗
+║  XIOPTIMIZER — HYPEROS & MIUI MASTER CONTROL                                   ║
+║  Select a category below to optimize your Xiaomi device                        ║
+╠════════════════════════════════════════════════════════════════════════════════╣
+║  [1] 🛡 Debloat & Telemetry              Safe Ads, Bloatware, Restore apps     ║
+║  [2] ⚡ Performance & Gaming             Joyose, 120Hz, Virtual RAM off, ART   ║
+║  [3] 🔋 Battery & Deep Sleep             Aggressive Doze, Wi-Fi/BT scan off    ║
+║  [4] 🌐 Network & Private DNS            AdGuard adblock, Cloudflare, Low-Ping ║
+║  [5] 🎨 UI & Fluidity                    0.5x animations, apps freezer, blur   ║
+║  [6] 🔮 Special Flags & Audio            Safe volume bypass, Camera lab, APK   ║
+║  [7] 🛠 Maintenance & Backups            TRIM storage, JSON state snapshots    ║
+║  [0] 🚪 Exit                             Safely quit XiOptimizer               ║
+╚════════════════════════════════════════════════════════════════════════════════╝
+```
+
+---
+
+## Architecture & Codebase Layout
+
+The project follows a modular Go package structure designed for maintainability and extensibility:
+
+```text
+XiOptimizer/
+├── internal/
+│   ├── adb/          # ADB client wrappers, device state polling, and HTTPS Google installer
+│   ├── backup/       # Device state snapshot manager (JSON capture and exact state restore)
+│   ├── packages/     # Curated lists of safe ad trackers and removable bloatware
+│   ├── tweaks/       # Modular handlers for Debloat, Performance, Battery, UI, and Network
+│   └── ui/           # Strict 82-column TUI layout engine, ASCII banner, and menus
+├── backups/          # Storage directory for captured device JSON state snapshots
+├── .github/          # GitHub Actions cross-compilation release workflow
+├── versioninfo.json  # Windows PE metadata definition
+├── main.go           # Application entry point and menu router
+└── go.mod            # Pure Go standard library dependencies
+```
+
 ---
 
 ## Key Capabilities
@@ -48,15 +109,17 @@ No root access is required. All operations communicate directly via Android Debu
 * **Unlock Hidden Camera Lab Features**: Creates the internal trigger directory to enable experimental camera toggles in the stock camera application.
 * **Bypass APK Verification Lag**: Skips verification countdowns and security checks on ADB sideloads.
 
-### 7. Storage & Maintenance Hub
+### 7. Storage, Maintenance & State Snapshots
+* **Device State Snapshots (JSON)**: Captures a complete snapshot of all Android settings namespaces (`global`, `secure`, `system`) and all installed packages before any changes are made.
+* **Exact State Restoration**: Rather than generic defaults, restores your device back to the exact snapshot taken before optimization.
 * **Flash Storage TRIM**: Executes `sm fstrim` across `/data` and `/system` to restore 4K random write speeds.
 * **Package Cache Pruning**: Frees gigabytes of stale app caches via `pm trim-caches`.
-* **Full Factory Defaults Reset**: Reverts all tweaks (animations, refresh rates, Doze, DNS, virtual RAM) and reinstalls packages in one click.
 
 ---
 
-## Reconnection Safety & Live Surveillance
+## Integrity & Reconnection Safety
 
+* **Strict HTTPS & Executable Verification**: ADB binaries are downloaded exclusively from official Google servers (`https://dl.google.com/android/repository/...`), verified for archive integrity, and validated by testing `adb version` output before execution.
 * **Non-Blocking Menu Loop**: Unplugging the USB cable while browsing menus immediately drops back to the USB connection discovery screen without freezing.
 * **Interrupted Batch Protection**: If the phone is disconnected mid-batch during uninstalls or parameter updates, XiOptimizer pauses execution, displays a reconnect banner, and resumes from the exact package once the cable is re-inserted.
 
@@ -68,7 +131,7 @@ Standalone binaries compiled for 64-bit systems without external runtime depende
 
 | Operating System | Architecture | Binary File |
 | :--- | :--- | :--- |
-| **Windows** | x86_64 / amd64 | `XiOptimizer-windows-amd64.exe` (or `XiOptimizer.exe`) |
+| **Windows** | x86_64 / amd64 | `XiOptimizer-windows-amd64.exe` (or `XiOptimizer-windows-amd64.zip`) |
 | **macOS** (Apple Silicon) | arm64 (M1/M2/M3/M4) | `XiOptimizer-darwin-arm64` |
 | **macOS** (Intel) | x86_64 / amd64 | `XiOptimizer-darwin-amd64` |
 | **Linux** | x86_64 / amd64 | `XiOptimizer-linux-amd64` |
@@ -109,8 +172,6 @@ chmod +x XiOptimizer-linux-amd64
 ./XiOptimizer-linux-amd64
 ```
 
-*Note: On first run, if ADB is not installed on your system, XiOptimizer will automatically download the official Google Android Platform Tools archive directly into the application folder.*
-
 ---
 
 ## Building from Source
@@ -123,16 +184,16 @@ git clone https://github.com/raceprombl/XiOptimizer.git
 cd XiOptimizer
 
 # Build for current host operating system
-go build -o XiOptimizer main.go
+go build -trimpath -o XiOptimizer .
 
 # Cross-compile for Windows
-GOOS=windows GOARCH=amd64 go build -o XiOptimizer-windows-amd64.exe main.go
+GOOS=windows GOARCH=amd64 go build -trimpath -o XiOptimizer-windows-amd64.exe .
 
 # Cross-compile for macOS (Apple Silicon)
-GOOS=darwin GOARCH=arm64 go build -o XiOptimizer-darwin-arm64 main.go
+GOOS=darwin GOARCH=arm64 go build -trimpath -o XiOptimizer-darwin-arm64 .
 
 # Cross-compile for Linux
-GOOS=linux GOARCH=amd64 go build -o XiOptimizer-linux-amd64 main.go
+GOOS=linux GOARCH=amd64 go build -trimpath -o XiOptimizer-linux-amd64 .
 ```
 
 ---
