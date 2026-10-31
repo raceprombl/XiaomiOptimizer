@@ -22,31 +22,6 @@ No root access is required. All operations communicate directly via Android Debu
 ║                  ✦ HyperOS & MIUI 11 / 12 / 13 / 14 Optimizer ✦                 ║
 ║                    Xiaomi • Redmi • POCO Debloater & Tweaker                   ║
 ╚════════════════════════════════════════════════════════════════════════════════╝
-
-┌────────────────────────────────────────────────────────────────────────────────┐
-│ CONNECTED DEVICE INFORMATION                                                   │
-├─────────────────────────┬──────────────────────────────────────────────────────┤
-│ Model & Codename:       │ 24117RN76G (tanzanite_global)                        │
-│ Serial Number (SN):     │ nfirtoemmv7lfaca                                     │
-│ Android Version:        │ Android 16                                           │
-│ OS / ROM Version:       │ Xiaomi HyperOS 3.0 [OS3.0]                           │
-│ Battery Status:         │ 82% [Charging (+), 33.5°C]                           │
-│ ADB Connection:         │ USB Debugging Authorized [OK]                        │
-└─────────────────────────┴──────────────────────────────────────────────────────┘
-
-╔════════════════════════════════════════════════════════════════════════════════╗
-║  XIOPTIMIZER — HYPEROS & MIUI MASTER CONTROL                                   ║
-║  Select a category below to optimize your Xiaomi device                        ║
-╠════════════════════════════════════════════════════════════════════════════════╣
-║  [1] 🛡 Debloat & Telemetry              Safe Ads, Bloatware, Restore apps     ║
-║  [2] ⚡ Performance & Gaming             Joyose, 120Hz, Virtual RAM off, ART   ║
-║  [3] 🔋 Battery & Deep Sleep             Aggressive Doze, Wi-Fi/BT scan off    ║
-║  [4] 🌐 Network & Private DNS            AdGuard adblock, Cloudflare, Low-Ping ║
-║  [5] 🎨 UI & Fluidity                    0.5x animations, apps freezer, blur   ║
-║  [6] 🔮 Special Flags & Audio            Safe volume bypass, Camera lab, APK   ║
-║  [7] 🛠 Maintenance & Backups            TRIM storage, JSON state snapshots    ║
-║  [0] 🚪 Exit                             Safely quit XiOptimizer               ║
-╚════════════════════════════════════════════════════════════════════════════════╝
 ```
 
 ---
