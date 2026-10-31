@@ -2,6 +2,7 @@
 *.exe
 *.dll
 *.zip
+*.syso
 dist/
 adb
 adb.exe

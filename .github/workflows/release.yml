@@ -45,7 +45,13 @@ jobs:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
         run: |
-          go build -trimpath -o ${{ matrix.output }} .
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@latest
+            goversioninfo -64
+            go build -trimpath -o ${{ matrix.output }} .
+          else
+            go build -trimpath -o ${{ matrix.output }} .
+          fi
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
