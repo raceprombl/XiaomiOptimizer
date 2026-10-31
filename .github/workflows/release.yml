@@ -47,7 +47,7 @@ jobs:
         run: |
           if [ "${{ matrix.goos }}" = "windows" ]; then
             go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@latest
-            goversioninfo -64
+            $(go env GOPATH)/bin/goversioninfo -64
             go build -trimpath -o ${{ matrix.output }} .
           else
             go build -trimpath -o ${{ matrix.output }} .
