@@ -4,10 +4,10 @@
 *.zip
 *.syso
 dist/
-adb
-adb.exe
-AdbWinApi.dll
-AdbWinUsbApi.dll
+/adb
+/adb.exe
+/AdbWinApi.dll
+/AdbWinUsbApi.dll
 platform-tools-temp.zip
 
 # IDE and OS files
