@@ -14,11 +14,17 @@ func PrintDeviceCard(d adb.DeviceDetails) {
 	mid := ColorCyan + "├" + strings.Repeat("─", 25) + "┬" + strings.Repeat("─", 54) + "┤" + ColorReset
 	bot := ColorCyan + "└" + strings.Repeat("─", 25) + "┴" + strings.Repeat("─", 54) + "┘" + ColorReset
 
+	brandColor := ColorGreen + ColorBold
+	if !d.IsXiaomi {
+		brandColor = ColorRed + ColorBold
+	}
+
 	items := []struct {
 		label string
 		val   string
 		color string
 	}{
+		{"Brand & Ecosystem:", d.BrandStatus, brandColor},
 		{"Model & Codename:", fmt.Sprintf("%s (%s)", d.Model, d.Codename), ColorBold},
 		{"Serial Number (SN):", d.Serial, ColorReset},
 		{"Android Version:", d.AndroidVer, ColorGreen},

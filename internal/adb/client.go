@@ -133,18 +133,124 @@ func GetProp(prop string, serial *string) string {
 	return strings.TrimSpace(res)
 }
 
+// BrandInfo holds manufacturer and brand verification details
+type BrandInfo struct {
+	IsXiaomi   bool
+	BrandName  string
+	Vendor     string
+	VerifiedBy string
+}
+
+// VerifyXiaomiBrand checks whether the connected device belongs to Xiaomi or its sub-brands (Redmi, POCO, Black Shark)
+func VerifyXiaomiBrand(serial *string) BrandInfo {
+	brand := strings.ToLower(GetProp("ro.product.brand", serial))
+	mfg := strings.ToLower(GetProp("ro.product.manufacturer", serial))
+	vendorBrand := strings.ToLower(GetProp("ro.product.vendor.brand", serial))
+	vendorMfg := strings.ToLower(GetProp("ro.product.vendor.manufacturer", serial))
+	systemBrand := strings.ToLower(GetProp("ro.product.system.brand", serial))
+	systemMfg := strings.ToLower(GetProp("ro.product.system.manufacturer", serial))
+	productName := strings.ToLower(GetProp("ro.product.name", serial))
+
+	miuiVer := GetProp("ro.miui.ui.version.name", serial)
+	hyperOSVer := GetProp("ro.mi.os.version.name", serial)
+	buildIncremental := GetProp("ro.build.version.incremental", serial)
+
+	allProps := strings.Join([]string{brand, mfg, vendorBrand, vendorMfg, systemBrand, systemMfg, productName}, " ")
+
+	// 1. Check for POCO
+	if strings.Contains(allProps, "poco") {
+		return BrandInfo{
+			IsXiaomi:   true,
+			BrandName:  "POCO",
+			Vendor:     "Xiaomi Corporation",
+			VerifiedBy: "ro.product.brand / manufacturer",
+		}
+	}
+
+	// 2. Check for Redmi
+	if strings.Contains(allProps, "redmi") {
+		return BrandInfo{
+			IsXiaomi:   true,
+			BrandName:  "Redmi",
+			Vendor:     "Xiaomi Corporation",
+			VerifiedBy: "ro.product.brand / manufacturer",
+		}
+	}
+
+	// 3. Check for Black Shark
+	if strings.Contains(allProps, "blackshark") || strings.Contains(allProps, "black shark") {
+		return BrandInfo{
+			IsXiaomi:   true,
+			BrandName:  "Black Shark",
+			Vendor:     "Blackshark Technologies",
+			VerifiedBy: "ro.product.brand",
+		}
+	}
+
+	// 4. Check for Xiaomi (Mi)
+	if strings.Contains(allProps, "xiaomi") {
+		return BrandInfo{
+			IsXiaomi:   true,
+			BrandName:  "Xiaomi",
+			Vendor:     "Xiaomi Corporation",
+			VerifiedBy: "ro.product.brand / manufacturer",
+		}
+	}
+
+	// 5. Check for MIUI or HyperOS props (even on custom or modified ROMs)
+	if hyperOSVer != "" {
+		return BrandInfo{
+			IsXiaomi:   true,
+			BrandName:  "Xiaomi / HyperOS",
+			Vendor:     "Xiaomi Corporation",
+			VerifiedBy: "ro.mi.os.version.name (" + hyperOSVer + ")",
+		}
+	}
+	if miuiVer != "" || strings.HasPrefix(buildIncremental, "V") {
+		return BrandInfo{
+			IsXiaomi:   true,
+			BrandName:  "Xiaomi / MIUI",
+			Vendor:     "Xiaomi Corporation",
+			VerifiedBy: "ro.miui.ui.version.name (" + miuiVer + ")",
+		}
+	}
+
+	// Non-Xiaomi device detected
+	displayBrand := brand
+	if displayBrand == "" {
+		displayBrand = mfg
+	}
+	if displayBrand == "" {
+		displayBrand = "Unknown OEM"
+	} else {
+		displayBrand = strings.ToUpper(displayBrand[:1]) + displayBrand[1:]
+	}
+
+	return BrandInfo{
+		IsXiaomi:   false,
+		BrandName:  displayBrand,
+		Vendor:     mfg,
+		VerifiedBy: "Non-Xiaomi hardware",
+	}
+}
+
 // DeviceDetails holds hardware, system, and battery information
 type DeviceDetails struct {
-	Model      string
-	Codename   string
-	Serial     string
-	AndroidVer string
-	OSVersion  string
-	Battery    string
+	Model       string
+	Codename    string
+	Serial      string
+	AndroidVer  string
+	OSVersion   string
+	Battery     string
+	Brand       string
+	IsXiaomi    bool
+	BrandStatus string
 }
 
 // FetchDeviceDetails queries the connected device for details, supporting MIUI 11 through HyperOS 3
 func FetchDeviceDetails(serial *string) DeviceDetails {
+	brandInfo := VerifyXiaomiBrand(serial)
+
 	model := GetProp("ro.product.model", serial)
 	if model == "" {
 		model = "Unknown"
@@ -228,13 +334,21 @@ func FetchDeviceDetails(serial *string) DeviceDetails {
 
 	batteryStr := ParseBattery(serial)
 
+	brandStatus := fmt.Sprintf("%s (Xiaomi Ecosystem) [Verified ✓]", brandInfo.BrandName)
+	if !brandInfo.IsXiaomi {
+		brandStatus = fmt.Sprintf("%s [NON-XIAOMI WARNING ✗]", brandInfo.BrandName)
+	}
+
 	return DeviceDetails{
-		Model:      model,
-		Codename:   codename,
-		Serial:     ser,
-		AndroidVer: "Android " + androidVer,
-		OSVersion:  osName,
-		Battery:    batteryStr,
+		Model:       model,
+		Codename:    codename,
+		Serial:      ser,
+		AndroidVer:  "Android " + androidVer,
+		OSVersion:   osName,
+		Battery:     batteryStr,
+		Brand:       brandInfo.BrandName,
+		IsXiaomi:    brandInfo.IsXiaomi,
+		BrandStatus: brandStatus,
 	}
 }
 

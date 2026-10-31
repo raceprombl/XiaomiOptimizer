@@ -258,6 +258,45 @@ func main() {
 			fmt.Printf("\r%s[🔍] Scanning USB ports%s%-4s%s", ui.ColorCyan, ui.ColorBold, dots, ui.ColorReset)
 		}
 
+		brandInfo := adb.VerifyXiaomiBrand(&connectedSerial)
+		if !brandInfo.IsXiaomi {
+			ui.ClearScreen()
+			ui.PrintBanner()
+			fmt.Println()
+
+			const innerWidth = 78
+			top := ui.ColorRed + "╔" + strings.Repeat("═", 80) + "╗" + ui.ColorReset
+			mid := ui.ColorRed + "╠" + strings.Repeat("═", 80) + "╣" + ui.ColorReset
+			bot := ui.ColorRed + "╚" + strings.Repeat("═", 80) + "╝" + ui.ColorReset
+
+			fmt.Println(top)
+			fmt.Println(ui.ColorRed + "║ " + ui.FitWidth(" ⚠️  NON-XIAOMI / INCOMPATIBLE DEVICE DETECTED", innerWidth) + ui.ColorRed + " ║" + ui.ColorReset)
+			fmt.Println(mid)
+			l1 := fmt.Sprintf("  Detected Brand:       %s%s%s", ui.ColorBold, brandInfo.BrandName, ui.ColorReset)
+			l2 := fmt.Sprintf("  Manufacturer:         %s%s%s", ui.ColorBold, brandInfo.Vendor, ui.ColorReset)
+			l3 := " "
+			l4 := "  XiOptimizer is engineered specifically for Xiaomi, Redmi, POCO &"
+			l5 := "  Black Shark devices running MIUI 11-14 or HyperOS 1.0-3.0."
+			l6 := " "
+			l7 := "  Applying Xiaomi system debloat packages and tweaks to a different brand"
+			l8 := "  (Samsung, Pixel, OnePlus, etc.) will fail or cause system instability!"
+			l9 := " "
+			l10 := fmt.Sprintf("  %s[1] Disconnect and wait for a Xiaomi phone (Recommended)%s", ui.ColorGreen, ui.ColorReset)
+			l11 := fmt.Sprintf("  %s[2] Force override and proceed anyway at your own risk%s", ui.ColorYellow, ui.ColorReset)
+
+			for _, l := range []string{l1, l2, l3, l4, l5, l6, l7, l8, l9, l10, l11} {
+				fmt.Println(ui.ColorRed + "║ " + ui.FitWidth(l, innerWidth) + ui.ColorRed + " ║" + ui.ColorReset)
+			}
+			fmt.Println(bot)
+			fmt.Println()
+			fmt.Print(ui.ColorBold + "Select an option [1-2] and press Enter: " + ui.ColorReset)
+
+			choice, ok := ui.PromptSelectionWithCableWatch(&connectedSerial)
+			if !ok || choice != "2" {
+				continue
+			}
+		}
+
 		_ = runMenuLoop(menuTree, &connectedSerial)
 	}
 }
