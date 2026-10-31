@@ -1,0 +1,16 @@
+# Binaries and platform tools
+*.exe
+*.dll
+*.zip
+dist/
+adb
+adb.exe
+AdbWinApi.dll
+AdbWinUsbApi.dll
+platform-tools-temp.zip
+
+# IDE and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
