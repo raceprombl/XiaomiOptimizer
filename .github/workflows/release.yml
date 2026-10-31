@@ -45,7 +45,7 @@ jobs:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
         run: |
-          go build -o ${{ matrix.output }} main.go
+          go build -trimpath -o ${{ matrix.output }} .
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
@@ -66,6 +66,12 @@ jobs:
         with:
           path: release-assets
           merge-multiple: true
+
+      - name: Package Windows ZIP Bundle
+        run: |
+          mkdir -p win-bundle
+          cp release-assets/XiOptimizer-windows-amd64.exe win-bundle/XiOptimizer.exe
+          cd win-bundle && zip ../release-assets/XiOptimizer-windows-amd64.zip XiOptimizer.exe && cd ..
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

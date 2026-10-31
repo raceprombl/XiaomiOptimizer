@@ -1,11 +1,8 @@
 package main
 
 import (
-	"archive/zip"
 	"bufio"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -192,43 +189,6 @@ var bloatwarePackages = []PackageInfo{
 // Path to resolved adb binary
 var resolvedAdbPath string
 
-// Wraps an io.Reader to show a live download progress bar
-type progressReader struct {
-	reader     io.Reader
-	totalBytes int64
-	readBytes  int64
-	lastUpdate time.Time
-}
-
-func (pr *progressReader) Read(p []byte) (int, error) {
-	n, err := pr.reader.Read(p)
-	pr.readBytes += int64(n)
-
-	if time.Since(pr.lastUpdate) > 100*time.Millisecond || pr.readBytes == pr.totalBytes {
-		pr.lastUpdate = time.Now()
-		pr.printProgress()
-	}
-	return n, err
-}
-
-func (pr *progressReader) printProgress() {
-	percent := float64(0)
-	if pr.totalBytes > 0 {
-		percent = float64(pr.readBytes) / float64(pr.totalBytes) * 100
-	}
-	mbDownloaded := float64(pr.readBytes) / 1024 / 1024
-	mbTotal := float64(pr.totalBytes) / 1024 / 1024
-
-	width := 32
-	completed := int((percent / 100) * float64(width))
-	if completed > width {
-		completed = width
-	}
-
-	bar := strings.Repeat("█", completed) + strings.Repeat("░", width-completed)
-	fmt.Printf("\r %s[%s]%s %6.1f%% (%5.1f MB / %5.1f MB)", colorCyan, bar, colorReset, percent, mbDownloaded, mbTotal)
-}
-
 // Sets console environment for Windows UTF-8
 func initConsole() {
 	if runtime.GOOS == "windows" {
@@ -281,91 +241,41 @@ func ensureADB() error {
 	fmt.Println(colorOrange + "╚════════════════════════════════════════════════════════════════════════════════╝" + colorReset)
 	fmt.Println()
 
-	var zipURL string
-	switch runtime.GOOS {
-	case "darwin":
-		zipURL = "https://dl.google.com/android/repository/platform-tools-latest-darwin.zip"
-	case "linux":
-		zipURL = "https://dl.google.com/android/repository/platform-tools-latest-linux.zip"
-	default:
-		zipURL = "https://dl.google.com/android/repository/platform-tools-latest-windows.zip"
-	}
-
-	tempZip := filepath.Join(baseDir, "platform-tools-temp.zip")
-
-	resp, err := http.Get(zipURL)
-	if err != nil {
-		return fmt.Errorf("network request failed for dl.google.com: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("server returned %s when downloading ADB", resp.Status)
-	}
-
-	outFile, err := os.Create(tempZip)
-	if err != nil {
-		return fmt.Errorf("failed to create temporary archive: %w", err)
-	}
-
-	pr := &progressReader{
-		reader:     resp.Body,
-		totalBytes: resp.ContentLength,
-		lastUpdate: time.Now(),
-	}
-
-	_, err = io.Copy(outFile, pr)
-	outFile.Close()
-	if err != nil {
-		_ = os.Remove(tempZip)
-		return fmt.Errorf("download error: %w", err)
-	}
-	fmt.Println()
-	fmt.Println(colorCyan + "\n[i] Extracting ADB binaries for " + runtime.GOOS + "..." + colorReset)
-
-	zipReader, err := zip.OpenReader(tempZip)
-	if err != nil {
-		_ = os.Remove(tempZip)
-		return fmt.Errorf("failed to open zip file: %w", err)
-	}
-	defer zipReader.Close()
-
-	neededFiles := map[string]bool{
-		"adb":              true,
-		"adb.exe":          true,
-		"AdbWinApi.dll":    true,
-		"AdbWinUsbApi.dll": true,
-	}
-
-	extractedCount := 0
-	for _, f := range zipReader.File {
-		baseName := filepath.Base(f.Name)
-		if neededFiles[baseName] {
-			targetPath := filepath.Join(baseDir, baseName)
-			rc, err := f.Open()
-			if err != nil {
-				continue
-			}
-
-			dstFile, err := os.OpenFile(targetPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0755)
-			if err != nil {
-				rc.Close()
-				continue
-			}
-
-			_, _ = io.Copy(dstFile, rc)
-			dstFile.Close()
-			rc.Close()
-			_ = os.Chmod(targetPath, 0755)
-			extractedCount++
+	if runtime.GOOS == "windows" {
+		psScript := fmt.Sprintf(`
+			$ProgressPreference = 'Continue'
+			$zip = Join-Path '%s' 'platform-tools.zip'
+			$targetDir = '%s'
+			Write-Host 'Downloading Google Platform Tools...' -ForegroundColor Cyan
+			Invoke-WebRequest -Uri 'https://dl.google.com/android/repository/platform-tools-latest-windows.zip' -OutFile $zip
+			Write-Host 'Extracting binaries...' -ForegroundColor Cyan
+			Expand-Archive -Path $zip -DestinationPath $targetDir -Force
+			Get-ChildItem -Path (Join-Path $targetDir 'platform-tools') | Move-Item -Destination $targetDir -Force
+			Remove-Item -Path (Join-Path $targetDir 'platform-tools') -Recurse -Force -ErrorAction SilentlyContinue
+			Remove-Item -Path $zip -Force -ErrorAction SilentlyContinue
+		`, baseDir, baseDir)
+		cmd := exec.Command("powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", psScript)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("powershell adb download failed: %w", err)
 		}
-	}
-
-	zipReader.Close()
-	_ = os.Remove(tempZip)
-
-	if extractedCount == 0 {
-		return fmt.Errorf("required executables not found in the downloaded archive")
+	} else if runtime.GOOS == "darwin" {
+		shScript := fmt.Sprintf(`curl -L -o "%s/platform-tools.zip" https://dl.google.com/android/repository/platform-tools-latest-darwin.zip && unzip -q -o "%s/platform-tools.zip" -d "%s" && mv "%s/platform-tools/adb" "%s/adb" && chmod +x "%s/adb" && rm -rf "%s/platform-tools" "%s/platform-tools.zip"`, baseDir, baseDir, baseDir, baseDir, baseDir, baseDir, baseDir, baseDir)
+		cmd := exec.Command("sh", "-c", shScript)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("curl adb download failed: %w", err)
+		}
+	} else {
+		shScript := fmt.Sprintf(`curl -L -o "%s/platform-tools.zip" https://dl.google.com/android/repository/platform-tools-latest-linux.zip && unzip -q -o "%s/platform-tools.zip" -d "%s" && mv "%s/platform-tools/adb" "%s/adb" && chmod +x "%s/adb" && rm -rf "%s/platform-tools" "%s/platform-tools.zip"`, baseDir, baseDir, baseDir, baseDir, baseDir, baseDir, baseDir, baseDir)
+		cmd := exec.Command("sh", "-c", shScript)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("curl adb download failed: %w", err)
+		}
 	}
 
 	resolvedAdbPath = filepath.Join(baseDir, adbName)
