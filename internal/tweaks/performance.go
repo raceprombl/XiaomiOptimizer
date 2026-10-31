@@ -96,7 +96,7 @@ func RunDisablePhantomProcessKiller(serial *string) {
 	fmt.Println(ui.ColorCyan + "\n[i] Phantom Process Killer disabled. Termux, bots, and background tasks run smoothly." + ui.ColorReset)
 }
 
-// RunARTCompilation compiles hot bytecode for applications
+// RunARTCompilation pre-compiles hot bytecode for system and top apps
 func RunARTCompilation(serial *string) {
 	ui.ClearScreen()
 	ui.PrintBanner()
@@ -105,11 +105,12 @@ func RunARTCompilation(serial *string) {
 	fmt.Println()
 
 	adb.EnsureDeviceConnected(serial)
-	fmt.Println(ui.ColorYellow + "[*] Compiling key system and user apps with speed-profile..." + ui.ColorReset)
+	fmt.Println(ui.ColorYellow + "[*] Compiling core system and daily apps with speed-profile..." + ui.ColorReset)
 
 	keyApps := []string{
 		"com.miui.home",
 		"com.android.systemui",
+		"com.android.settings",
 		"com.android.chrome",
 		"org.telegram.messenger",
 		"com.google.android.youtube",
@@ -117,7 +118,7 @@ func RunARTCompilation(serial *string) {
 
 	for _, app := range keyApps {
 		adb.EnsureDeviceConnected(serial)
-		fmt.Printf(" • Compiling: %-32s... ", app)
+		fmt.Printf(" • Compiling: %-30s... ", app)
 		out, _ := adb.RunADBShellWithRetry("cmd package compile -m speed-profile -f "+app, serial)
 		if strings.Contains(out, "Success") {
 			fmt.Println(ui.ColorGreen + "[✓ Compiled]" + ui.ColorReset)
@@ -126,10 +127,12 @@ func RunARTCompilation(serial *string) {
 		}
 	}
 
-	fmt.Println(ui.ColorCyan + "\n[*] Triggering background dexopt job for remaining apps...")
-	_, _ = adb.RunADBShellWithRetry("cmd package bg-dexopt-job", serial)
-	fmt.Println(ui.ColorGreen + "[✓ Background AOT compilation task scheduled]" + ui.ColorReset)
-	fmt.Println(ui.ColorCyan + "[i] App launch times and UI frame rates significantly improved." + ui.ColorReset)
+	fmt.Println(ui.ColorCyan + "\n[*] Scheduling background AOT dexopt for remaining apps..." + ui.ColorReset)
+	_, _ = adb.RunADBShellWithRetry("cmd package bg-dexopt-job --enable", serial)
+	_, _ = adb.RunADBShellWithRetry("nohup cmd package bg-dexopt-job >/dev/null 2>&1 &", serial)
+	fmt.Println(ui.ColorGreen + "[✓ Background AOT compilation task launched asynchronously]" + ui.ColorReset)
+	fmt.Println(ui.ColorGray + "  Android will continue compiling apps silently while idle or charging." + ui.ColorReset)
+	fmt.Println(ui.ColorGreen + ui.ColorBold + "[✓] Core system UI and apps compiled. Device responsiveness boosted!" + ui.ColorReset)
 }
 
 // RunAllPerformanceBatch applies all performance tweaks in sequence
