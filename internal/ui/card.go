@@ -19,6 +19,11 @@ func PrintDeviceCard(d adb.DeviceDetails) {
 		brandColor = ColorRed + ColorBold
 	}
 
+	connText := "USB Debugging Authorized [OK]"
+	if d.IsWireless {
+		connText = "Wireless ADB over Wi-Fi [OK]"
+	}
+
 	items := []struct {
 		label string
 		val   string
@@ -30,7 +35,7 @@ func PrintDeviceCard(d adb.DeviceDetails) {
 		{"Android Version:", d.AndroidVer, ColorGreen},
 		{"OS / ROM Version:", d.OSVersion, ColorOrange + ColorBold},
 		{"Battery Status:", d.Battery, ColorYellow},
-		{"ADB Connection:", "USB Debugging Authorized [OK]", ColorGreen},
+		{"ADB Connection:", connText, ColorGreen},
 	}
 
 	fmt.Println(top)

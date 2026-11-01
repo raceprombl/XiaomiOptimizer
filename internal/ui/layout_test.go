@@ -72,6 +72,7 @@ func TestMenuRowWidths(t *testing.T) {
 				{Key: "2", Icon: "⚡", Title: "Enable Cloudflare 1.1.1.1 DNS", Description: "Ultra-low latency DNS for gaming ping"},
 				{Key: "3", Icon: "📶", Title: "Wi-Fi Low-Latency HAL & Roam", Description: "Fixes Wi-Fi jitter & roaming drops"},
 				{Key: "4", Icon: "🔄", Title: "Reset DNS to Automatic Mode", Description: "Restores default DHCP resolver setup"},
+				{Key: "5", Icon: "🌐", Title: "Enable Wireless ADB (Wi-Fi)", Description: "Switches to wireless mode on port 5555"},
 				{Key: "A", Icon: "⚡", Title: "Apply AdGuard + Low-Latency", Description: "Best combination for adblock & speed"},
 				{Key: "0", Icon: "🔙", Title: "Back to Main Menu", Description: "Return to category selection"},
 			},

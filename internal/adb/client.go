@@ -41,6 +41,101 @@ func RunADBShell(cmdStr string) (string, error) {
 	return RunADB("shell", cmdStr)
 }
 
+// RunADBShellForDevice executes a shell command targeting a specific device serial
+func RunADBShellForDevice(cmdStr string, serial *string) (string, error) {
+	if serial != nil && *serial != "" {
+		return RunADB("-s", *serial, "shell", cmdStr)
+	}
+	return RunADB("shell", cmdStr)
+}
+
+// ConnectWiFi attempts to connect to an ADB daemon over TCP/IP
+func ConnectWiFi(address string) (string, error) {
+	address = strings.TrimSpace(address)
+	if address == "" {
+		return "", fmt.Errorf("empty IP address provided")
+	}
+	if !strings.Contains(address, ":") {
+		address = address + ":5555"
+	}
+	return RunADB("connect", address)
+}
+
+// PairWiFi pairs with an Android 11+ wireless debugging host using a 6-digit code
+func PairWiFi(address string, code string) (string, error) {
+	address = strings.TrimSpace(address)
+	code = strings.TrimSpace(code)
+	if address == "" || code == "" {
+		return "", fmt.Errorf("address and pairing code are required")
+	}
+	return RunADB("pair", address, code)
+}
+
+// EnableTCPMode restarts the device's adbd daemon listening on specified TCP port
+func EnableTCPMode(port int, serial *string) (string, error) {
+	if port <= 0 {
+		port = 5555
+	}
+	portStr := strconv.Itoa(port)
+	if serial != nil && *serial != "" {
+		return RunADB("-s", *serial, "tcpip", portStr)
+	}
+	return RunADB("tcpip", portStr)
+}
+
+// DisconnectWiFi disconnects an existing TCP/IP adb session
+func DisconnectWiFi(address string) (string, error) {
+	address = strings.TrimSpace(address)
+	if address == "" {
+		return RunADB("disconnect")
+	}
+	return RunADB("disconnect", address)
+}
+
+// GetDeviceWiFiIP retrieves the device's local WLAN IPv4 address
+func GetDeviceWiFiIP(serial *string) string {
+	// Try 1: ip -f inet addr show wlan0
+	out, _ := RunADBShellForDevice("ip -f inet addr show wlan0", serial)
+	for _, line := range strings.Split(out, "\n") {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "inet ") {
+			fields := strings.Fields(line)
+			if len(fields) >= 2 {
+				ipMask := fields[1]
+				parts := strings.Split(ipMask, "/")
+				if len(parts) >= 1 && strings.Count(parts[0], ".") == 3 {
+					return parts[0]
+				}
+			}
+		}
+	}
+
+	// Try 2: ip route
+	outRoute, _ := RunADBShellForDevice("ip route", serial)
+	for _, line := range strings.Split(outRoute, "\n") {
+		if strings.Contains(line, "wlan0") && strings.Contains(line, "src ") {
+			fields := strings.Fields(line)
+			for i, f := range fields {
+				if f == "src" && i+1 < len(fields) {
+					ip := fields[i+1]
+					if strings.Count(ip, ".") == 3 {
+						return ip
+					}
+				}
+			}
+		}
+	}
+
+	// Try 3: getprop dhcp.wlan0.ipaddress
+	propIP, _ := RunADBShellForDevice("getprop dhcp.wlan0.ipaddress", serial)
+	propIP = strings.TrimSpace(propIP)
+	if strings.Count(propIP, ".") == 3 {
+		return propIP
+	}
+
+	return ""
+}
+
 // IsDisconnectedError checks if an error output signifies a disconnected or offline device
 func IsDisconnectedError(out string, err error) bool {
 	if err != nil {
@@ -89,12 +184,21 @@ func EnsureDeviceConnected(serial *string) {
 		return
 	}
 
-	fmt.Println(colorYellow + colorBold + "\n[!] Connection lost. Please plug your phone back in via USB to continue..." + colorReset)
+	isWiFi := serial != nil && strings.Contains(*serial, ":")
+	if isWiFi {
+		fmt.Printf(colorYellow+colorBold+"\n[!] Wi-Fi connection to %s lost. Attempting to reconnect..."+colorReset+"\n", *serial)
+	} else {
+		fmt.Println(colorYellow + colorBold + "\n[!] Connection lost. Please plug your phone back in via USB to continue..." + colorReset)
+	}
 
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 
 	for range ticker.C {
+		if isWiFi {
+			_, _ = ConnectWiFi(*serial)
+		}
+
 		s, st := CheckDeviceState()
 		if st == "unauthorized" {
 			fmt.Printf("\r%s[!] Device %s detected, but not authorized. Confirm debugging on phone...%s", colorYellow, s, colorReset)
@@ -107,7 +211,11 @@ func EnsureDeviceConnected(serial *string) {
 			return
 		}
 		dots := strings.Repeat(".", int(time.Now().Unix()%4))
-		fmt.Printf("\r%s[⏳] Waiting for phone to be reconnected%s%-4s%s", colorYellow, colorBold, dots, colorReset)
+		if isWiFi {
+			fmt.Printf("\r%s[⏳] Reconnecting to Wi-Fi (%s)%s%-4s%s", colorYellow, *serial, colorBold, dots, colorReset)
+		} else {
+			fmt.Printf("\r%s[⏳] Waiting for phone to be reconnected%s%-4s%s", colorYellow, colorBold, dots, colorReset)
+		}
 	}
 }
 
@@ -115,7 +223,7 @@ func EnsureDeviceConnected(serial *string) {
 func RunADBShellWithRetry(cmdStr string, serial *string) (string, error) {
 	for {
 		EnsureDeviceConnected(serial)
-		out, err := RunADBShell(cmdStr)
+		out, err := RunADBShellForDevice(cmdStr, serial)
 		if IsDisconnectedError(out, err) {
 			EnsureDeviceConnected(serial)
 			continue
@@ -245,6 +353,7 @@ type DeviceDetails struct {
 	Brand       string
 	IsXiaomi    bool
 	BrandStatus string
+	IsWireless  bool
 }
 
 // FetchDeviceDetails queries the connected device for details, supporting MIUI 11 through HyperOS 3
@@ -339,6 +448,8 @@ func FetchDeviceDetails(serial *string) DeviceDetails {
 		brandStatus = fmt.Sprintf("%s [NON-XIAOMI WARNING ✗]", brandInfo.BrandName)
 	}
 
+	isWireless := strings.Contains(ser, ":") || (serial != nil && strings.Contains(*serial, ":"))
+
 	return DeviceDetails{
 		Model:       model,
 		Codename:    codename,
@@ -349,6 +460,7 @@ func FetchDeviceDetails(serial *string) DeviceDetails {
 		Brand:       brandInfo.BrandName,
 		IsXiaomi:    brandInfo.IsXiaomi,
 		BrandStatus: brandStatus,
+		IsWireless:  isWireless,
 	}
 }
 

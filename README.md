@@ -68,6 +68,7 @@ XiOptimizer/
 * **Minimize System Logd Buffer**: Drops logd ring-buffer size to 64K, cutting background CPU wakeups and diagnostic write wear.
 
 ### 4. Network & Private DNS Hub
+* **Wireless ADB over Wi-Fi**: Complete wireless debugging setup with 3 pairing methods: Quick Connect by IP (`<IP>:5555`), Android 11+ / HyperOS wireless pairing code interactive wizard, and 1-click switch from USB to Wi-Fi.
 * **AdGuard Private DNS (DoT)**: System-wide adblocking through encrypted DNS-over-TLS (`dns.adguard-dns.com`). Blocks banner ads and popups across apps and browsers without running battery-heavy VPN apps.
 * **Cloudflare 1.1.1.1 Private DNS**: Ultra-low latency DNS resolution for gaming connections.
 * **Wi-Fi Low-Latency Mode & Roaming Fix**: Forces Wi-Fi HAL low-latency mode and disables Xiaomi cloud network switching to prevent ping spikes during online gaming.

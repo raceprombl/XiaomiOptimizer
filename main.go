@@ -85,6 +85,7 @@ func buildMenuTree() *ui.Menu {
 		{Key: "2", Icon: "⚡", Title: "Enable Cloudflare 1.1.1.1 DNS", Description: "Ultra-low latency DNS for gaming ping", Handler: tweaks.RunSetCloudflareDNS},
 		{Key: "3", Icon: "📶", Title: "Wi-Fi Low-Latency HAL & Roam", Description: "Fixes Wi-Fi jitter & roaming drops", Handler: tweaks.RunWiFiLowLatency},
 		{Key: "4", Icon: "🔄", Title: "Reset DNS to Automatic Mode", Description: "Restores default DHCP resolver setup", Handler: tweaks.RunResetPrivateDNS},
+		{Key: "5", Icon: "🌐", Title: "Enable Wireless ADB (Wi-Fi)", Description: "Switches to wireless mode on port 5555", Handler: tweaks.RunEnableWirelessADB},
 		{Key: "A", Icon: "⚡", Title: "Apply AdGuard + Low-Latency", Description: "Best combination for adblock & speed", Handler: tweaks.RunAllNetworkBatch},
 		{Key: "0", Icon: "🔙", Title: "Back to Main Menu", Description: "Return to category selection"},
 	}
@@ -150,6 +151,204 @@ func buildMenuTree() *ui.Menu {
 	return mainMenu
 }
 
+// runWiFiWizard guides user through connecting to Xiaomi phone over Wi-Fi
+func runWiFiWizard() {
+	for {
+		ui.ClearScreen()
+		ui.PrintBanner()
+		fmt.Println()
+
+		const innerWidth = 78
+		top := ui.ColorMiCyan + "╔" + strings.Repeat("═", 80) + "╗" + ui.ColorReset
+		mid := ui.ColorMiCyan + "╠" + strings.Repeat("═", 80) + "╣" + ui.ColorReset
+		bot := ui.ColorMiCyan + "╚" + strings.Repeat("═", 80) + "╝" + ui.ColorReset
+
+		fmt.Println(top)
+		fmt.Println(ui.ColorMiCyan + "║ " + ui.FitWidth(" 📶  WIRELESS ADB & WI-FI CONNECTION WIZARD", innerWidth) + ui.ColorMiCyan + " ║" + ui.ColorReset)
+		fmt.Println(ui.ColorMiCyan + "║ " + ui.FitWidth(" Connect and optimize your Xiaomi / Redmi / POCO device wirelessly", innerWidth) + ui.ColorMiCyan + " ║" + ui.ColorReset)
+		fmt.Println(mid)
+
+		items := []struct {
+			key   string
+			title string
+			desc  string
+		}{
+			{"1", "⚡ Quick Connect by IP", "e.g. 192.168.1.50 or 192.168.1.50:5555"},
+			{"2", "🔑 Wireless Debugging (Pairing Code)", "Android 11+ / HyperOS / MIUI 12.5+"},
+			{"3", "🔄 One-Click Switch from USB to Wi-Fi", "Configures port 5555 on USB phone"},
+			{"0", "🔙 Return to Auto-Scan", "Go back to main device detection loop"},
+		}
+
+		for _, it := range items {
+			line := fmt.Sprintf(" [%s] %-36s %s", it.key, it.title, it.desc)
+			fmt.Println(ui.ColorMiCyan + "║ " + ui.FitWidth(line, innerWidth) + ui.ColorMiCyan + " ║" + ui.ColorReset)
+		}
+		fmt.Println(bot)
+		fmt.Println()
+		fmt.Print(ui.ColorBold + "Select an option [1-3, 0] and press Enter: " + ui.ColorReset)
+
+		ui.DrainInput()
+		choice := <-ui.InputChan
+		choice = strings.ToUpper(strings.TrimSpace(choice))
+
+		switch choice {
+		case "0", "BACK", "EXIT":
+			return
+
+		case "1":
+			ui.ClearScreen()
+			ui.PrintBanner()
+			fmt.Println(ui.ColorMiCyan + ui.ColorBold + "\n[1] QUICK CONNECT BY IP ADDRESS" + ui.ColorReset)
+			fmt.Println(ui.ColorGray + "Enter the IP address of your phone (must be on the same Wi-Fi network):" + ui.ColorReset)
+			fmt.Println()
+			fmt.Print(ui.ColorBold + "Enter IP (e.g. 192.168.1.50 or 192.168.1.50:5555): " + ui.ColorReset)
+			ui.DrainInput()
+			target := strings.TrimSpace(<-ui.InputChan)
+			if target == "" {
+				continue
+			}
+			if !strings.Contains(target, ":") {
+				target = target + ":5555"
+			}
+			fmt.Printf("\n[⏳] Connecting to %s... ", target)
+			out, _ := adb.ConnectWiFi(target)
+			if strings.Contains(out, "connected to") {
+				fmt.Println(ui.ColorGreen + "[✓ Success!]" + ui.ColorReset)
+				fmt.Printf(ui.ColorGreen+"Connected to %s over Wi-Fi.\n"+ui.ColorReset, target)
+				time.Sleep(1 * time.Second)
+				return
+			}
+			fmt.Println(ui.ColorRed + "[✗ Failed]" + ui.ColorReset)
+			fmt.Printf(ui.ColorYellow+"Output: %s\n"+ui.ColorReset, out)
+			fmt.Println(ui.ColorGray + "\nTroubleshooting tips:")
+			fmt.Println("  1. Make sure phone and PC are on the SAME Wi-Fi network.")
+			fmt.Println("  2. If using Android 11+ Wireless Debugging, use Option 2 (Pairing Code).")
+			fmt.Println("  3. If using port 5555, enable it first via USB (Option 3).")
+			ui.WaitEnter()
+
+		case "2":
+			ui.ClearScreen()
+			ui.PrintBanner()
+			fmt.Println(ui.ColorMiCyan + ui.ColorBold + "\n[2] WIRELESS DEBUGGING WITH PAIRING CODE (ANDROID 11+ / HYPEROS)" + ui.ColorReset)
+			fmt.Println(ui.ColorGray + "Instructions on your Xiaomi / Redmi / POCO phone:" + ui.ColorReset)
+			fmt.Println("  1. Open Settings -> Developer Options (Для разработчиков).")
+			fmt.Println("  2. Turn ON 'Wireless Debugging' (Беспроводная отладка).")
+			fmt.Println("  3. Tap 'Pair device with pairing code' (Подключить с помощью кода).")
+			fmt.Println("  4. You will see an IP:PairingPort and a 6-digit Wi-Fi Pairing Code.")
+			fmt.Println()
+
+			fmt.Print(ui.ColorBold + "Step 1. Enter IP & Pairing Port from phone (e.g. 192.168.1.50:37841): " + ui.ColorReset)
+			ui.DrainInput()
+			pairTarget := strings.TrimSpace(<-ui.InputChan)
+			if pairTarget == "" {
+				continue
+			}
+
+			fmt.Print(ui.ColorBold + "Step 2. Enter 6-digit Wi-Fi Pairing Code (e.g. 849201): " + ui.ColorReset)
+			ui.DrainInput()
+			code := strings.TrimSpace(<-ui.InputChan)
+			if code == "" {
+				continue
+			}
+
+			fmt.Printf("\n[⏳] Pairing with %s... ", pairTarget)
+			out, _ := adb.PairWiFi(pairTarget, code)
+			if !strings.Contains(out, "Successfully paired") && !strings.Contains(out, "already paired") {
+				fmt.Println(ui.ColorRed + "[✗ Pairing Failed]" + ui.ColorReset)
+				fmt.Printf(ui.ColorYellow+"Output: %s\n"+ui.ColorReset, out)
+				ui.WaitEnter()
+				continue
+			}
+			fmt.Println(ui.ColorGreen + "[✓ Successfully Paired!]" + ui.ColorReset)
+
+			ipBase := pairTarget
+			if idx := strings.LastIndex(pairTarget, ":"); idx != -1 {
+				ipBase = pairTarget[:idx]
+			}
+
+			fmt.Println(ui.ColorGray + "\nNow look at the main 'Wireless Debugging' screen on your phone.")
+			fmt.Println("Check the 'IP address & Port' displayed at the top." + ui.ColorReset)
+			fmt.Print(ui.ColorBold + "Step 3. Enter connection port (or full IP:Port, e.g. 41235): " + ui.ColorReset)
+			ui.DrainInput()
+			connInput := strings.TrimSpace(<-ui.InputChan)
+			if connInput == "" {
+				continue
+			}
+
+			connectTarget := connInput
+			if !strings.Contains(connInput, ":") {
+				connectTarget = ipBase + ":" + connInput
+			}
+
+			fmt.Printf("\n[⏳] Connecting to %s... ", connectTarget)
+			connOut, _ := adb.ConnectWiFi(connectTarget)
+			if strings.Contains(connOut, "connected to") {
+				fmt.Println(ui.ColorGreen + "[✓ Connected!]" + ui.ColorReset)
+				fmt.Printf(ui.ColorGreen+"Wireless ADB session active on %s\n"+ui.ColorReset, connectTarget)
+				time.Sleep(1 * time.Second)
+				return
+			}
+			fmt.Println(ui.ColorRed + "[✗ Connection Failed]" + ui.ColorReset)
+			fmt.Printf(ui.ColorYellow+"Output: %s\n"+ui.ColorReset, connOut)
+			ui.WaitEnter()
+
+		case "3":
+			ui.ClearScreen()
+			ui.PrintBanner()
+			fmt.Println(ui.ColorMiCyan + ui.ColorBold + "\n[3] ONE-CLICK SWITCH FROM USB TO WI-FI" + ui.ColorReset)
+			fmt.Println(ui.ColorGray + "Automatically configures wireless mode while USB cable is plugged in:" + ui.ColorReset)
+			fmt.Println()
+
+			ser, st := adb.CheckDeviceState()
+			if st != "device" {
+				fmt.Println(ui.ColorRed + "[!] No device currently connected via USB cable." + ui.ColorReset)
+				fmt.Println(ui.ColorGray + "    Plug in the USB cable once to enable port 5555, then you can unplug it." + ui.ColorReset)
+				ui.WaitEnter()
+				continue
+			}
+
+			fmt.Printf(" • Detected device: %s%s%s\n", ui.ColorBold, ser, ui.ColorReset)
+			fmt.Print(" • Detecting phone's local Wi-Fi IP address... ")
+			ip := adb.GetDeviceWiFiIP(&ser)
+			if ip != "" {
+				fmt.Printf(ui.ColorGreen+"[✓ Found: %s]\n"+ui.ColorReset, ip)
+			} else {
+				fmt.Println(ui.ColorYellow + "[– Could not auto-detect]" + ui.ColorReset)
+				fmt.Print(ui.ColorBold + "   Please enter phone's Wi-Fi IP (from Wi-Fi Settings): " + ui.ColorReset)
+				ui.DrainInput()
+				ip = strings.TrimSpace(<-ui.InputChan)
+				if ip == "" {
+					continue
+				}
+			}
+
+			fmt.Print(" • Setting adbd to port 5555... ")
+			_, err := adb.EnableTCPMode(5555, &ser)
+			if err != nil {
+				fmt.Println(ui.ColorRed + "[✗ Failed]" + ui.ColorReset)
+				ui.WaitEnter()
+				continue
+			}
+			fmt.Println(ui.ColorGreen + "[✓ Ready]" + ui.ColorReset)
+
+			time.Sleep(1 * time.Second)
+			target := ip + ":5555"
+			fmt.Printf(" • Connecting to %s... ", target)
+			connOut, _ := adb.ConnectWiFi(target)
+			if strings.Contains(connOut, "connected to") {
+				fmt.Println(ui.ColorGreen + "[✓ Connected!]" + ui.ColorReset)
+				fmt.Println(ui.ColorGreen + ui.ColorBold + "\n[🎉] WIRELESS ADB ACTIVATED!" + ui.ColorReset)
+				fmt.Println(ui.ColorCyan + "[i] You can now safely UNPLUG the USB cable." + ui.ColorReset)
+				time.Sleep(1500 * time.Millisecond)
+				return
+			}
+			fmt.Println(ui.ColorRed + "[✗ Connection Failed]" + ui.ColorReset)
+			fmt.Printf(ui.ColorYellow+"Output: %s\n"+ui.ColorReset, connOut)
+			ui.WaitEnter()
+		}
+	}
+}
+
 // runMenuLoop manages hierarchical navigation with live USB connection surveillance
 func runMenuLoop(root *ui.Menu, serial *string) bool {
 	current := root
@@ -171,7 +370,7 @@ func runMenuLoop(root *ui.Menu, serial *string) bool {
 
 		choice, ok := ui.PromptSelectionWithCableWatch(serial)
 		if !ok {
-			return false // Cable disconnected -> drop immediately back to USB scan
+			return false // Cable / Wi-Fi disconnected -> drop immediately back to scan
 		}
 
 		if choice == "0" {
@@ -232,30 +431,44 @@ func main() {
 		ui.PrintBanner()
 		fmt.Println()
 		fmt.Println(ui.ColorYellow + ui.ColorBold + "[⏳] Waiting for a Xiaomi / Redmi / POCO phone..." + ui.ColorReset)
-		fmt.Println(ui.ColorGray + "  1. Enable 'USB Debugging' in Developer Options on your phone.")
-		fmt.Println("  2. Connect the phone to this computer via USB cable.")
-		fmt.Println("  3. Allow USB debugging if prompted on your phone's screen." + ui.ColorReset)
+		fmt.Println(ui.ColorGray + "  • USB Mode:   Connect phone via USB cable (USB Debugging enabled).")
+		fmt.Println("  • Wi-Fi Mode: Type 'W' and press Enter to open Wireless Setup Wizard." + ui.ColorReset)
 		fmt.Println()
 
 		var connectedSerial string
 
-		ticker := time.NewTicker(2 * time.Second)
-		for range ticker.C {
+		ticker := time.NewTicker(1500 * time.Millisecond)
+		for {
 			serial, state := adb.CheckDeviceState()
 
 			if state == "unauthorized" {
 				fmt.Printf("\r%s[!] Device %s detected, but NOT AUTHORIZED. Confirm debugging on phone...%s", ui.ColorYellow, serial, ui.ColorReset)
-				continue
-			}
-
-			if state == "device" {
+			} else if state == "device" {
 				connectedSerial = serial
 				ticker.Stop()
 				break
+			} else {
+				dots := strings.Repeat(".", int(time.Now().Unix()%4))
+				fmt.Printf("\r%s[🔍] Scanning for phone (USB / Wi-Fi)%s%-4s%s [Press 'W' + Enter for Wi-Fi]: ", ui.ColorCyan, ui.ColorBold, dots, ui.ColorReset)
 			}
 
-			dots := strings.Repeat(".", int(time.Now().Unix()%4))
-			fmt.Printf("\r%s[🔍] Scanning USB ports%s%-4s%s", ui.ColorCyan, ui.ColorBold, dots, ui.ColorReset)
+			select {
+			case inp := <-ui.InputChan:
+				cmd := strings.ToUpper(strings.TrimSpace(inp))
+				if cmd == "W" || cmd == "WIFI" {
+					ticker.Stop()
+					runWiFiWizard()
+					ui.ClearScreen()
+					ui.PrintBanner()
+					fmt.Println()
+					fmt.Println(ui.ColorYellow + ui.ColorBold + "[⏳] Waiting for a Xiaomi / Redmi / POCO phone..." + ui.ColorReset)
+					fmt.Println(ui.ColorGray + "  • USB Mode:   Connect phone via USB cable (USB Debugging enabled).")
+					fmt.Println("  • Wi-Fi Mode: Type 'W' and press Enter to open Wireless Setup Wizard." + ui.ColorReset)
+					fmt.Println()
+					ticker = time.NewTicker(1500 * time.Millisecond)
+				}
+			case <-ticker.C:
+			}
 		}
 
 		brandInfo := adb.VerifyXiaomiBrand(&connectedSerial)

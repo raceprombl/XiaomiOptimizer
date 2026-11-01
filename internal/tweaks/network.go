@@ -2,6 +2,8 @@ package tweaks
 
 import (
 	"fmt"
+	"strings"
+	"time"
 
 	"github.com/raceprombl/XiOptimizer/internal/adb"
 	"github.com/raceprombl/XiOptimizer/internal/ui"
@@ -77,6 +79,64 @@ func RunWiFiLowLatency(serial *string) {
 	fmt.Println(ui.ColorGreen + "[✓ Done]" + ui.ColorReset)
 
 	fmt.Println(ui.ColorCyan + "\n[i] Wi-Fi latency stabilized. Packet drops and jitter during gaming reduced." + ui.ColorReset)
+}
+
+// RunEnableWirelessADB switches current USB session to wireless ADB over Wi-Fi
+func RunEnableWirelessADB(serial *string) {
+	ui.ClearScreen()
+	ui.PrintBanner()
+	fmt.Println(ui.ColorCyan + ui.ColorBold + "\n[5] ENABLE WIRELESS ADB OVER WI-FI" + ui.ColorReset)
+	fmt.Println(ui.ColorGray + "Configure device for wireless ADB and disconnect USB cable:" + ui.ColorReset)
+	fmt.Println()
+
+	adb.EnsureDeviceConnected(serial)
+
+	if strings.Contains(*serial, ":") {
+		fmt.Printf(ui.ColorGreen+"[✓] Device is ALREADY connected via Wi-Fi: %s\n"+ui.ColorReset, *serial)
+		fmt.Println(ui.ColorCyan + "[i] You can already safely use XiOptimizer without any USB cables." + ui.ColorReset)
+		return
+	}
+
+	fmt.Print(" • Detecting phone's local Wi-Fi IP address... ")
+	ip := adb.GetDeviceWiFiIP(serial)
+	if ip != "" {
+		fmt.Printf(ui.ColorGreen+"[✓ Found: %s]\n"+ui.ColorReset, ip)
+	} else {
+		fmt.Println(ui.ColorYellow + "[– Could not auto-detect]" + ui.ColorReset)
+		fmt.Print(ui.ColorBold + "   Please enter phone's Wi-Fi IP (from Wi-Fi Settings): " + ui.ColorReset)
+		line := <-ui.InputChan
+		ip = strings.TrimSpace(line)
+		if ip == "" {
+			fmt.Println(ui.ColorRed + "[!] Canceled. Wi-Fi IP address is required." + ui.ColorReset)
+			return
+		}
+	}
+
+	fmt.Print(" • Restarting adbd in TCP/IP mode on port 5555... ")
+	_, err := adb.EnableTCPMode(5555, serial)
+	if err != nil {
+		fmt.Println(ui.ColorRed + "[✗ Failed]" + ui.ColorReset)
+		fmt.Printf(ui.ColorRed+"    Error: %v\n"+ui.ColorReset, err)
+		return
+	}
+	fmt.Println(ui.ColorGreen + "[✓ Ready]" + ui.ColorReset)
+
+	time.Sleep(1 * time.Second)
+
+	target := ip + ":5555"
+	fmt.Printf(" • Connecting to %s... ", target)
+	out, _ := adb.ConnectWiFi(target)
+	if strings.Contains(out, "connected to") {
+		fmt.Println(ui.ColorGreen + "[✓ Connected]" + ui.ColorReset)
+		*serial = target
+		fmt.Println(ui.ColorGreen + ui.ColorBold + "\n[🎉] WIRELESS ADB ACTIVATED!" + ui.ColorReset)
+		fmt.Println(ui.ColorCyan + "[i] You can now safely UNPLUG the USB cable." + ui.ColorReset)
+		fmt.Println(ui.ColorCyan + "[i] XiOptimizer will continue operating fully wirelessly over Wi-Fi." + ui.ColorReset)
+	} else {
+		fmt.Println(ui.ColorYellow + "[i Connection pending]" + ui.ColorReset)
+		fmt.Printf("   Output: %s\n", out)
+		fmt.Println(ui.ColorGray + "   Ensure phone and PC are on the same Wi-Fi router." + ui.ColorReset)
+	}
 }
 
 // RunAllNetworkBatch configures AdGuard DNS and low-latency Wi-Fi

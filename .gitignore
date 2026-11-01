@@ -10,6 +10,9 @@ dist/
 /AdbWinUsbApi.dll
 platform-tools-temp.zip
 
+# Backups and snapshots
+backups/
+
 # IDE and OS files
 .vscode/
 .idea/
