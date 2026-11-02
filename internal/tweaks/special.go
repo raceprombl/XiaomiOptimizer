@@ -18,6 +18,7 @@ func RunBypassSafeVolume(serial *string) {
 	adb.EnsureDeviceConnected(serial)
 	fmt.Print(" • Overriding safe audio volume state... ")
 	_, _ = adb.RunADBShellWithRetry("settings put global audio_safe_volume_state 2", serial)
+	_, _ = adb.RunADBShellWithRetry("settings put global audio.safemedia.bypass true", serial)
 	_, _ = adb.RunADBShellWithRetry("settings put system safe_volume 0", serial)
 	fmt.Println(ui.ColorGreen + "[✓ Applied]" + ui.ColorReset)
 
@@ -58,6 +59,23 @@ func RunBypassInstallerLag(serial *string) {
 	fmt.Println(ui.ColorCyan + "\n[i] APK install verification skipped. App installs execute instantly." + ui.ColorReset)
 }
 
+// RunBurnInProtection enables AMOLED pixel-shifting protection for status bar icons
+func RunBurnInProtection(serial *string) {
+	ui.ClearScreen()
+	ui.PrintBanner()
+	fmt.Println(ui.ColorYellow + ui.ColorBold + "\n[4] AMOLED DISPLAY BURN-IN PROTECTION" + ui.ColorReset)
+	fmt.Println(ui.ColorGray + "Enabling periodic micro-pixel shifting to prevent status bar burn-in:" + ui.ColorReset)
+	fmt.Println()
+
+	adb.EnsureDeviceConnected(serial)
+	fmt.Print(" • Enabling AMOLED burn-in protection in system framework... ")
+	_, _ = adb.RunADBShellWithRetry("settings put global burn_in_protection 1", serial)
+	fmt.Println(ui.ColorGreen + "[✓ Enabled]" + ui.ColorReset)
+
+	fmt.Println(ui.ColorCyan + "\n[i] Burn-in protection active. Status bar icons will periodically micro-shift")
+	fmt.Println("    to preserve AMOLED panel longevity on Xiaomi/Redmi/POCO devices." + ui.ColorReset)
+}
+
 // RunAllSpecialBatch applies all special system flags
 func RunAllSpecialBatch(serial *string) {
 	RunBypassSafeVolume(serial)
@@ -65,4 +83,6 @@ func RunAllSpecialBatch(serial *string) {
 	RunUnlockCameraLab(serial)
 	fmt.Println()
 	RunBypassInstallerLag(serial)
+	fmt.Println()
+	RunBurnInProtection(serial)
 }

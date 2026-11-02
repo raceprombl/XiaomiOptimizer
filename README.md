@@ -50,7 +50,7 @@ XiOptimizer/
 ## Key Capabilities
 
 ### 1. Debloat & Privacy Hub
-* **Safe Ads & Telemetry Cleanup**: Strips out background analytics daemons and ad injection services (`com.miui.msa.global`, `com.miui.analytics`, `com.miui.daemon`, `com.xiaomi.ugd`, `com.miui.misightservice`, `cn.wps.xiaomi.abroad.lite`, Facebook system background services, and wallpaper carousel ads).
+* **Safe Ads & Telemetry Cleanup**: Strips out background analytics daemons and ad injection services (`com.miui.msa.global`, `com.miui.analytics`, `com.miui.daemon`, `com.xiaomi.ugd`, `com.miui.misightservice`, `cn.wps.xiaomi.abroad.lite`, Facebook system background services, and wallpaper carousel ads). Disables hidden Xiaomi NDCD (Network Data Collection Daemon) and MIUI TCP Tracker.
 * **Deep Bloatware Removal**: Removes bundled vendor applications (`com.android.browser`, `com.mi.globalbrowser`, `com.miui.videoplayer`, `com.miui.player`, `com.mi.globalminusscreen` App Vault, `com.miui.cleaner`, and `video.like`).
 * **Instant Reinstallation / Restore**: Restore any or all uninstalled packages back to stock anytime via `cmd package install-existing`.
 
@@ -60,6 +60,8 @@ XiOptimizer/
 * **Disable Virtual RAM (ExtM / UFS Swap)**: Disables MIUI/HyperOS Memory Extension. Paging RAM into slow flash storage causes severe 0.1% low frame drops and micro-stutters. Turning it off restores smooth frame pacing and preserves flash NAND endurance.
 * **Disable Phantom Process Killer**: Increases Android 12+ child process limit to 2147483647, preventing the OS from killing background Termux sessions, compilers, and bots.
 * **ART Speed-Profile Ahead-Of-Time Bytecode Compilation**: Compiles hot bytecode for system UI, launcher, and user apps for faster cold-starts and higher UI framerates.
+* **Vulkan HWUI UI Renderer (SkiaVK)**: Forces multithreaded Vulkan rendering backend (`skiavkthreaded`) for system UI and 120Hz animations, reducing CPU overhead.
+* **Game Low-Latency & EAS uclamp Scheduling**: Minimizes SurfaceFlinger display buffer queue lag and guarantees priority CPU clock scheduling for active gaming apps.
 
 ### 3. Battery & Deep Sleep Hub
 * **Aggressive Doze & Sleep Timeout**: Shortens idle timeout before device enters deep sleep from 30 minutes to 30 seconds while whitelisting priority messaging apps (Telegram, WhatsApp).
@@ -75,15 +77,16 @@ XiOptimizer/
 
 ### 5. UI, Fluidity & Visual Hub
 * **0.5x Fast System Animations**: Cuts window, transition, and animator durations in half for instant UI feedback.
-* **Native Cached Apps Freezer**: Enables Linux kernel cgroup process freezing (`cached_apps_freezer`), preventing idle background apps from burning CPU cycles.
+* **Native Cached Apps Freezer & Proactive RAM Compaction**: Enables Linux kernel cgroup process freezing (`cached_apps_freezer`) and proactive ActivityManager memory compaction (`use_compaction`), keeping apps ready in RAM without CPU battery drain.
 * **Touch Latency & Response Tuning**: Optimizes tap thresholds, long-press latency, and touch sampling parameters.
 * **Unlock Control Center Gaussian Blur**: Overrides GPU `deviceLevelList` to `v:1,c:3,g:3` and enables `window_blurs_enabled`, replacing the ugly grey background on budget Redmi and POCO phones with real-time blur shaders.
 * **Hide Gesture Bar Indicator Line**: Reclaims display real estate by hiding the navigation line at the bottom of the screen.
 
 ### 6. Special System Flags & Audio Hub
-* **Bypass Safe Headphone Volume Warning**: Disables European and regional 60% headphone volume reset popups.
+* **Bypass Safe Headphone Volume Warning**: Disables European and regional 60% headphone volume reset popups and safe media bypass restrictions.
 * **Unlock Hidden Camera Lab Features**: Creates the internal trigger directory to enable experimental camera toggles in the stock camera application.
 * **Bypass APK Verification Lag**: Skips verification countdowns and security checks on ADB sideloads.
+* **AMOLED Display Burn-in Protection**: Enables native subpixel micro-shifting for status bar icons, protecting OLED and AMOLED displays from permanent burn-in.
 
 ### 7. Storage, Maintenance & State Snapshots
 * **Device State Snapshots (JSON)**: Captures a complete snapshot of all Android settings namespaces (`global`, `secure`, `system`) and all installed packages before any changes are made.

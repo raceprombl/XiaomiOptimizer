@@ -166,6 +166,19 @@ func RunResetAllTweaks(serial *string) {
 	_, _ = adb.RunADBShellWithRetry("rm -rf /sdcard/DCIM/Camera/lab_options_visible", serial)
 	fmt.Println(ui.ColorGreen + "[✓ Done]" + ui.ColorReset)
 
+	fmt.Print(" • Restoring UI rendering, game latency, and AMOLED settings... ")
+	_, _ = adb.RunADBShellWithRetry("settings delete global rendering_type", serial)
+	_, _ = adb.RunADBShellWithRetry("settings delete global persist.sys.ui.rendering", serial)
+	_, _ = adb.RunADBShellWithRetry("settings delete global game_low_latency_mode", serial)
+	_, _ = adb.RunADBShellWithRetry("settings delete global uclamp_min_latency_sensitive", serial)
+	_, _ = adb.RunADBShellWithRetry("settings delete global uclamp_min_top_app", serial)
+	_, _ = adb.RunADBShellWithRetry("settings delete global uclamp_min_high_scheduling_group", serial)
+	_, _ = adb.RunADBShellWithRetry("settings delete global burn_in_protection", serial)
+	_, _ = adb.RunADBShellWithRetry("settings delete global sys.miui.ndcd", serial)
+	_, _ = adb.RunADBShellWithRetry("settings delete global persist.sys.miuitcptracker.ctrl", serial)
+	_, _ = adb.RunADBShellWithRetry("settings delete global audio.safemedia.bypass", serial)
+	fmt.Println(ui.ColorGreen + "[✓ Done]" + ui.ColorReset)
+
 	fmt.Println("\n[*] Reinstalling removed packages:")
 	RunRestorePackagesOnly(serial)
 

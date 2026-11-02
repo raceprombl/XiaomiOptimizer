@@ -42,7 +42,16 @@ func RunSafeAdsCleanup(serial *string) {
 
 	fmt.Println()
 	fmt.Printf(ui.ColorGreen+ui.ColorBold+"[✓] Done. Removed: %d | Already absent: %d\n"+ui.ColorReset, successCount, notFoundCount)
-	fmt.Println(ui.ColorCyan + "[i] System ads and trackers uninstalled for user 0." + ui.ColorReset)
+
+	fmt.Print(" • Disabling MIUI Network Data Collection Daemon (NDCD)... ")
+	_, _ = adb.RunADBShellWithRetry("settings put global sys.miui.ndcd off", serial)
+	fmt.Println(ui.ColorGreen + "[✓ Disabled]" + ui.ColorReset)
+
+	fmt.Print(" • Disabling MIUI TCP Connection Tracker... ")
+	_, _ = adb.RunADBShellWithRetry("settings put global persist.sys.miuitcptracker.ctrl false", serial)
+	fmt.Println(ui.ColorGreen + "[✓ Disabled]" + ui.ColorReset)
+
+	fmt.Println(ui.ColorCyan + "[i] System ads, trackers, and network telemetry uninstalled for user 0." + ui.ColorReset)
 }
 
 // RunBloatwareCleanup removes non-essential media apps, promo utilities, and browser

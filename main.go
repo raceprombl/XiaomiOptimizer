@@ -55,6 +55,8 @@ func buildMenuTree() *ui.Menu {
 		{Key: "3", Icon: "🧠", Title: "Disable Virtual RAM (Swap)", Description: "Stops UFS storage swap micro-stutters", Handler: tweaks.RunDisableVirtualRAM},
 		{Key: "4", Icon: "👻", Title: "Disable Phantom Process Killer", Description: "Prevents Android from killing Termux", Handler: tweaks.RunDisablePhantomProcessKiller},
 		{Key: "5", Icon: "⚙️", Title: "ART Speed-Profile AOT Compile", Description: "Pre-compiles hot bytecode for apps", Handler: tweaks.RunARTCompilation},
+		{Key: "6", Icon: "🎮", Title: "Vulkan HWUI UI Renderer", Description: "Enables SkiaVK backend for UI", Handler: tweaks.RunVulkanRenderer},
+		{Key: "7", Icon: "⚡", Title: "Game Low-Latency & uclamp", Description: "Reduces touch lag & frame queue", Handler: tweaks.RunGameLowLatency},
 		{Key: "A", Icon: "⚡", Title: "Apply All Performance Tweaks", Description: "Ultimate gaming & responsiveness setup", Handler: tweaks.RunAllPerformanceBatch},
 		{Key: "0", Icon: "🔙", Title: "Back to Main Menu", Description: "Return to category selection"},
 	}
@@ -98,7 +100,7 @@ func buildMenuTree() *ui.Menu {
 	}
 	uiSub.Items = []ui.MenuItem{
 		{Key: "1", Icon: "🎨", Title: "0.5x Fast System Animations", Description: "Halves window, transition & delays", Handler: tweaks.RunFastAnimations},
-		{Key: "2", Icon: "🧊", Title: "Native Cached Apps Freezer", Description: "Freezes background apps in RAM, saves", Handler: tweaks.RunCachedAppsFreezer},
+		{Key: "2", Icon: "🧊", Title: "Native Freezer & RAM Compact", Description: "Freezes background apps & compacts RAM", Handler: tweaks.RunCachedAppsFreezer},
 		{Key: "3", Icon: "👆", Title: "Touch Latency & Response", Description: "Optimizes pointer speed & touch rate", Handler: tweaks.RunTouchTuning},
 		{Key: "4", Icon: "✨", Title: "Unlock Control Center Blur", Description: "Fixes ugly grey background on budget", Handler: tweaks.RunFixGreyBlur},
 		{Key: "5", Icon: "➖", Title: "Hide Gesture Bar Indicator", Description: "True immersive fullscreen display", Handler: tweaks.RunHideGestureLine},
@@ -116,6 +118,7 @@ func buildMenuTree() *ui.Menu {
 		{Key: "1", Icon: "🔊", Title: "Bypass Safe Headphone Volume", Description: "Disables 60% volume limiter popups", Handler: tweaks.RunBypassSafeVolume},
 		{Key: "2", Icon: "📷", Title: "Unlock Hidden Camera Lab", Description: "Enables experimental camera toggles", Handler: tweaks.RunUnlockCameraLab},
 		{Key: "3", Icon: "⚡", Title: "Bypass APK Verification Lag", Description: "Skips slow security scanner on install", Handler: tweaks.RunBypassInstallerLag},
+		{Key: "4", Icon: "🛡️", Title: "AMOLED Burn-in Protection", Description: "Enables pixel shift for OLED status", Handler: tweaks.RunBurnInProtection},
 		{Key: "A", Icon: "⚡", Title: "Apply All Special Flags", Description: "Instant installs, max volume & camera", Handler: tweaks.RunAllSpecialBatch},
 		{Key: "0", Icon: "🔙", Title: "Back to Main Menu", Description: "Return to category selection"},
 	}
@@ -139,11 +142,11 @@ func buildMenuTree() *ui.Menu {
 	// Root Main Menu items
 	mainMenu.Items = []ui.MenuItem{
 		{Key: "1", Icon: "🔒", Title: "Debloat & Telemetry", Description: "Safe Ads, Bloatware, Restore apps", SubMenu: debloatSub},
-		{Key: "2", Icon: "⚡", Title: "Performance & Gaming", Description: "Joyose, 120Hz, Virtual RAM off, ART", SubMenu: perfSub},
+		{Key: "2", Icon: "⚡", Title: "Performance & Gaming", Description: "Joyose, 120Hz, Vulkan, Low-Lag, ART", SubMenu: perfSub},
 		{Key: "3", Icon: "🔋", Title: "Battery & Deep Sleep", Description: "Aggressive Doze, Wi-Fi/BT scan, Logd", SubMenu: batterySub},
 		{Key: "4", Icon: "🌐", Title: "Network & Private DNS", Description: "AdGuard adblock, Cloudflare, Low-Ping", SubMenu: netSub},
 		{Key: "5", Icon: "🎨", Title: "UI & Fluidity", Description: "0.5x animations, apps freezer, touch", SubMenu: uiSub},
-		{Key: "6", Icon: "🔮", Title: "Special Flags & Audio", Description: "Safe volume bypass, Camera lab, APK", SubMenu: specialSub},
+		{Key: "6", Icon: "🔮", Title: "Special Flags & Audio", Description: "Safe volume, Camera lab, Burn-in", SubMenu: specialSub},
 		{Key: "7", Icon: "🔧", Title: "Maintenance & Backups", Description: "TRIM storage, cache clean, snapshots", SubMenu: maintSub},
 		{Key: "0", Icon: "🚪", Title: "Exit", Description: "Safely quit XiOptimizer", Handler: nil},
 	}

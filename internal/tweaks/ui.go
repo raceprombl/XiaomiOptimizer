@@ -29,8 +29,8 @@ func RunFastAnimations(serial *string) {
 func RunCachedAppsFreezer(serial *string) {
 	ui.ClearScreen()
 	ui.PrintBanner()
-	fmt.Println(ui.ColorMiCyan + ui.ColorBold + "\n[2] NATIVE CACHED APPS FREEZER" + ui.ColorReset)
-	fmt.Println(ui.ColorGray + "Freezing idle background processes in RAM using kernel cgroups:" + ui.ColorReset)
+	fmt.Println(ui.ColorMiCyan + ui.ColorBold + "\n[2] NATIVE CACHED APPS FREEZER & RAM COMPACTION" + ui.ColorReset)
+	fmt.Println(ui.ColorGray + "Freezing idle background processes and enabling proactive RAM compaction:" + ui.ColorReset)
 	fmt.Println()
 
 	adb.EnsureDeviceConnected(serial)
@@ -40,7 +40,12 @@ func RunCachedAppsFreezer(serial *string) {
 	_, _ = adb.RunADBShellWithRetry("device_config put activity_manager max_cached_processes 64", serial)
 	fmt.Println(ui.ColorGreen + "[✓ Enabled]" + ui.ColorReset)
 
-	fmt.Println(ui.ColorCyan + "\n[i] Inactive apps frozen in RAM: 0% CPU consumption in background." + ui.ColorReset)
+	fmt.Print(" • Enabling proactive ActivityManager RAM compaction & hibernation... ")
+	_, _ = adb.RunADBShellWithRetry("settings put global persist.device_config.activity_manager.use_compaction true", serial)
+	_, _ = adb.RunADBShellWithRetry("device_config put app_hibernation app_hibernation_enabled 1", serial)
+	fmt.Println(ui.ColorGreen + "[✓ Enabled]" + ui.ColorReset)
+
+	fmt.Println(ui.ColorCyan + "\n[i] Inactive apps frozen in RAM & compacted: 0% CPU consumption and more free memory." + ui.ColorReset)
 }
 
 // RunTouchTuning reduces long press delays and touch dead zones

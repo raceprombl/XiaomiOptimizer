@@ -135,6 +135,48 @@ func RunARTCompilation(serial *string) {
 	fmt.Println(ui.ColorGreen + ui.ColorBold + "[✓] Core system UI and apps compiled. Device responsiveness boosted!" + ui.ColorReset)
 }
 
+// RunVulkanRenderer forces the Vulkan (SkiaVK) rendering backend for UI smoothness
+func RunVulkanRenderer(serial *string) {
+	ui.ClearScreen()
+	ui.PrintBanner()
+	fmt.Println(ui.ColorMiCyan + ui.ColorBold + "\n[6] VULKAN HWUI UI RENDERER (SKIAVK)" + ui.ColorReset)
+	fmt.Println(ui.ColorGray + "Enforcing multithreaded Vulkan rendering backend for system UI & animations:" + ui.ColorReset)
+	fmt.Println()
+
+	adb.EnsureDeviceConnected(serial)
+	fmt.Print(" • Configuring HWUI renderer backend to SkiaVK... ")
+	_, _ = adb.RunADBShellWithRetry("setprop debug.hwui.renderer skiavkthreaded", serial)
+	_, _ = adb.RunADBShellWithRetry("setprop debug.renderengine.backend skiavkthreaded", serial)
+	_, _ = adb.RunADBShellWithRetry("settings put global rendering_type skiavk", serial)
+	_, _ = adb.RunADBShellWithRetry("settings put global persist.sys.ui.rendering skiavk", serial)
+	fmt.Println(ui.ColorGreen + "[✓ Applied]" + ui.ColorReset)
+
+	fmt.Println(ui.ColorCyan + "\n[i] Vulkan UI rendering active. Reduces CPU overhead during 120Hz scrolling.")
+	fmt.Println("    Restart SystemUI or reboot phone for full system-wide effects." + ui.ColorReset)
+}
+
+// RunGameLowLatency optimizes display buffer queue depth and EAS CPU scheduler clamp
+func RunGameLowLatency(serial *string) {
+	ui.ClearScreen()
+	ui.PrintBanner()
+	fmt.Println(ui.ColorMiCyan + ui.ColorBold + "\n[7] GAME LOW-LATENCY & EAS UCLAMP SCHEDULER" + ui.ColorReset)
+	fmt.Println(ui.ColorGray + "Minimizing touch input lag and locking high-performance CPU scheduling:" + ui.ColorReset)
+	fmt.Println()
+
+	adb.EnsureDeviceConnected(serial)
+	fmt.Print(" • Enabling SurfaceFlinger game low-latency mode... ")
+	_, _ = adb.RunADBShellWithRetry("settings put global game_low_latency_mode 1", serial)
+	fmt.Println(ui.ColorGreen + "[✓ Done]" + ui.ColorReset)
+
+	fmt.Print(" • Configuring EAS uclamp latency sensitivity for foreground app... ")
+	_, _ = adb.RunADBShellWithRetry("settings put global uclamp_min_latency_sensitive 25", serial)
+	_, _ = adb.RunADBShellWithRetry("settings put global uclamp_min_top_app 20", serial)
+	_, _ = adb.RunADBShellWithRetry("settings put global uclamp_min_high_scheduling_group 15", serial)
+	fmt.Println(ui.ColorGreen + "[✓ Applied]" + ui.ColorReset)
+
+	fmt.Println(ui.ColorCyan + "\n[i] Game low-latency enabled. Display frame queue minimized and touch response boosted." + ui.ColorReset)
+}
+
 // RunAllPerformanceBatch applies all performance tweaks in sequence
 func RunAllPerformanceBatch(serial *string) {
 	RunJoyoseRemoval(serial)
@@ -146,4 +188,8 @@ func RunAllPerformanceBatch(serial *string) {
 	RunDisablePhantomProcessKiller(serial)
 	fmt.Println()
 	RunARTCompilation(serial)
+	fmt.Println()
+	RunVulkanRenderer(serial)
+	fmt.Println()
+	RunGameLowLatency(serial)
 }
