@@ -12,6 +12,8 @@ platform-tools-temp.zip
 
 # Backups and snapshots
 backups/
+wifi_history.json
+.wifi_history.json
 
 # IDE and OS files
 .vscode/

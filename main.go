@@ -161,6 +161,12 @@ func runWiFiWizard() {
 		ui.PrintBanner()
 		fmt.Println()
 
+		savedList := adb.LoadWiFiHistory()
+		lastSaved := ""
+		if len(savedList) > 0 {
+			lastSaved = savedList[0]
+		}
+
 		const innerWidth = 78
 		top := ui.ColorMiCyan + "╔" + strings.Repeat("═", 80) + "╗" + ui.ColorReset
 		mid := ui.ColorMiCyan + "╠" + strings.Repeat("═", 80) + "╣" + ui.ColorReset
@@ -171,15 +177,29 @@ func runWiFiWizard() {
 		fmt.Println(ui.ColorMiCyan + "║ " + ui.FitWidth(" Connect and optimize your Xiaomi / Redmi / POCO device wirelessly", innerWidth) + ui.ColorMiCyan + " ║" + ui.ColorReset)
 		fmt.Println(mid)
 
-		items := []struct {
+		type wizardItem struct {
 			key   string
 			title string
 			desc  string
-		}{
-			{"1", "⚡ Quick Connect by IP", "e.g. 192.168.1.50 or 192.168.1.50:5555"},
-			{"2", "🔑 Wireless Debugging (Pairing Code)", "Android 11+ / HyperOS / MIUI 12.5+"},
-			{"3", "🔄 One-Click Switch from USB to Wi-Fi", "Configures port 5555 on USB phone"},
-			{"0", "🔙 Return to Auto-Scan", "Go back to main device detection loop"},
+		}
+
+		var items []wizardItem
+		if lastSaved != "" {
+			items = []wizardItem{
+				{"1", "⚡ Reconnect to Saved Device", lastSaved + " (Remembered)"},
+				{"2", "🌐 Connect to New IP Address", "e.g. 192.168.1.50 or :5555"},
+				{"3", "🔑 Wireless Debugging (Pairing Code)", "Android 11+ / HyperOS / MIUI 12.5+"},
+				{"4", "🔄 One-Click Switch from USB to Wi-Fi", "Configures port 5555 on USB phone"},
+				{"5", "🗑️ Clear Saved Wi-Fi History", "Forget remembered device IP"},
+				{"0", "🔙 Return to Auto-Scan", "Go back to main device detection loop"},
+			}
+		} else {
+			items = []wizardItem{
+				{"1", "⚡ Quick Connect by IP", "e.g. 192.168.1.50 or 192.168.1.50:5555"},
+				{"2", "🔑 Wireless Debugging (Pairing Code)", "Android 11+ / HyperOS / MIUI 12.5+"},
+				{"3", "🔄 One-Click Switch from USB to Wi-Fi", "Configures port 5555 on USB phone"},
+				{"0", "🔙 Return to Auto-Scan", "Go back to main device detection loop"},
+			}
 		}
 
 		for _, it := range items {
@@ -188,20 +208,74 @@ func runWiFiWizard() {
 		}
 		fmt.Println(bot)
 		fmt.Println()
-		fmt.Print(ui.ColorBold + "Select an option [1-3, 0] and press Enter: " + ui.ColorReset)
+		fmt.Print(ui.ColorBold + "Select an option and press Enter: " + ui.ColorReset)
 
 		ui.DrainInput()
 		choice := <-ui.InputChan
 		choice = strings.ToUpper(strings.TrimSpace(choice))
 
-		switch choice {
-		case "0", "BACK", "EXIT":
+		if choice == "0" || choice == "BACK" || choice == "EXIT" {
 			return
+		}
 
-		case "1":
+		// Normalize choice when saved history is present
+		action := choice
+		if lastSaved != "" {
+			switch choice {
+			case "1":
+				action = "RECONNECT_SAVED"
+			case "2":
+				action = "CONNECT_IP"
+			case "3":
+				action = "PAIR_CODE"
+			case "4":
+				action = "SWITCH_USB"
+			case "5":
+				action = "CLEAR_HISTORY"
+			}
+		} else {
+			switch choice {
+			case "1":
+				action = "CONNECT_IP"
+			case "2":
+				action = "PAIR_CODE"
+			case "3":
+				action = "SWITCH_USB"
+			}
+		}
+
+		switch action {
+		case "RECONNECT_SAVED":
 			ui.ClearScreen()
 			ui.PrintBanner()
-			fmt.Println(ui.ColorMiCyan + ui.ColorBold + "\n[1] QUICK CONNECT BY IP ADDRESS" + ui.ColorReset)
+			fmt.Println(ui.ColorMiCyan + ui.ColorBold + "\n[1] RECONNECT TO REMEMBERED WI-FI TARGET" + ui.ColorReset)
+			fmt.Printf(ui.ColorGray+"Connecting to previously saved address: %s%s%s...\n"+ui.ColorReset, ui.ColorBold, lastSaved, ui.ColorReset)
+			fmt.Println()
+			fmt.Printf("[⏳] Connecting to %s... ", lastSaved)
+			out, _ := adb.ConnectWiFi(lastSaved)
+			if strings.Contains(out, "connected to") {
+				adb.SaveWiFiHistory(lastSaved)
+				fmt.Println(ui.ColorGreen + "[✓ Success!]" + ui.ColorReset)
+				fmt.Printf(ui.ColorGreen+"Connected to %s over Wi-Fi.\n"+ui.ColorReset, lastSaved)
+				time.Sleep(1 * time.Second)
+				return
+			}
+			fmt.Println(ui.ColorRed + "[✗ Failed]" + ui.ColorReset)
+			fmt.Printf(ui.ColorYellow+"Output: %s\n"+ui.ColorReset, out)
+			fmt.Println(ui.ColorGray + "\nTroubleshooting tips:")
+			fmt.Println("  1. Make sure phone and PC are on the SAME Wi-Fi network.")
+			fmt.Println("  2. If the phone rebooted, port 5555 might have closed (re-enable via USB or Pairing Code).")
+			ui.WaitEnter()
+
+		case "CLEAR_HISTORY":
+			adb.ClearWiFiHistory()
+			fmt.Println(ui.ColorGreen + "\n[✓] Saved Wi-Fi history cleared." + ui.ColorReset)
+			time.Sleep(1 * time.Second)
+
+		case "CONNECT_IP":
+			ui.ClearScreen()
+			ui.PrintBanner()
+			fmt.Println(ui.ColorMiCyan + ui.ColorBold + "\nCONNECT BY IP ADDRESS" + ui.ColorReset)
 			fmt.Println(ui.ColorGray + "Enter the IP address of your phone (must be on the same Wi-Fi network):" + ui.ColorReset)
 			fmt.Println()
 			fmt.Print(ui.ColorBold + "Enter IP (e.g. 192.168.1.50 or 192.168.1.50:5555): " + ui.ColorReset)
@@ -216,6 +290,7 @@ func runWiFiWizard() {
 			fmt.Printf("\n[⏳] Connecting to %s... ", target)
 			out, _ := adb.ConnectWiFi(target)
 			if strings.Contains(out, "connected to") {
+				adb.SaveWiFiHistory(target)
 				fmt.Println(ui.ColorGreen + "[✓ Success!]" + ui.ColorReset)
 				fmt.Printf(ui.ColorGreen+"Connected to %s over Wi-Fi.\n"+ui.ColorReset, target)
 				time.Sleep(1 * time.Second)
@@ -225,14 +300,14 @@ func runWiFiWizard() {
 			fmt.Printf(ui.ColorYellow+"Output: %s\n"+ui.ColorReset, out)
 			fmt.Println(ui.ColorGray + "\nTroubleshooting tips:")
 			fmt.Println("  1. Make sure phone and PC are on the SAME Wi-Fi network.")
-			fmt.Println("  2. If using Android 11+ Wireless Debugging, use Option 2 (Pairing Code).")
-			fmt.Println("  3. If using port 5555, enable it first via USB (Option 3).")
+			fmt.Println("  2. If using Android 11+ Wireless Debugging, use Option (Pairing Code).")
+			fmt.Println("  3. If using port 5555, enable it first via USB.")
 			ui.WaitEnter()
 
-		case "2":
+		case "PAIR_CODE":
 			ui.ClearScreen()
 			ui.PrintBanner()
-			fmt.Println(ui.ColorMiCyan + ui.ColorBold + "\n[2] WIRELESS DEBUGGING WITH PAIRING CODE (ANDROID 11+ / HYPEROS)" + ui.ColorReset)
+			fmt.Println(ui.ColorMiCyan + ui.ColorBold + "\nWIRELESS DEBUGGING WITH PAIRING CODE (ANDROID 11+ / HYPEROS)" + ui.ColorReset)
 			fmt.Println(ui.ColorGray + "Instructions on your Xiaomi / Redmi / POCO phone:" + ui.ColorReset)
 			fmt.Println("  1. Open Settings -> Developer Options (Для разработчиков).")
 			fmt.Println("  2. Turn ON 'Wireless Debugging' (Беспроводная отладка).")
@@ -286,6 +361,7 @@ func runWiFiWizard() {
 			fmt.Printf("\n[⏳] Connecting to %s... ", connectTarget)
 			connOut, _ := adb.ConnectWiFi(connectTarget)
 			if strings.Contains(connOut, "connected to") {
+				adb.SaveWiFiHistory(connectTarget)
 				fmt.Println(ui.ColorGreen + "[✓ Connected!]" + ui.ColorReset)
 				fmt.Printf(ui.ColorGreen+"Wireless ADB session active on %s\n"+ui.ColorReset, connectTarget)
 				time.Sleep(1 * time.Second)
@@ -295,10 +371,10 @@ func runWiFiWizard() {
 			fmt.Printf(ui.ColorYellow+"Output: %s\n"+ui.ColorReset, connOut)
 			ui.WaitEnter()
 
-		case "3":
+		case "SWITCH_USB":
 			ui.ClearScreen()
 			ui.PrintBanner()
-			fmt.Println(ui.ColorMiCyan + ui.ColorBold + "\n[3] ONE-CLICK SWITCH FROM USB TO WI-FI" + ui.ColorReset)
+			fmt.Println(ui.ColorMiCyan + ui.ColorBold + "\nONE-CLICK SWITCH FROM USB TO WI-FI" + ui.ColorReset)
 			fmt.Println(ui.ColorGray + "Automatically configures wireless mode while USB cable is plugged in:" + ui.ColorReset)
 			fmt.Println()
 
@@ -339,6 +415,7 @@ func runWiFiWizard() {
 			fmt.Printf(" • Connecting to %s... ", target)
 			connOut, _ := adb.ConnectWiFi(target)
 			if strings.Contains(connOut, "connected to") {
+				adb.SaveWiFiHistory(target)
 				fmt.Println(ui.ColorGreen + "[✓ Connected!]" + ui.ColorReset)
 				fmt.Println(ui.ColorGreen + ui.ColorBold + "\n[🎉] WIRELESS ADB ACTIVATED!" + ui.ColorReset)
 				fmt.Println(ui.ColorCyan + "[i] You can now safely UNPLUG the USB cable." + ui.ColorReset)
@@ -436,11 +513,17 @@ func main() {
 		fmt.Println(ui.ColorYellow + ui.ColorBold + "[⏳] Waiting for a Xiaomi / Redmi / POCO phone..." + ui.ColorReset)
 		fmt.Println(ui.ColorGray + "  • USB Mode:   Connect phone via USB cable (USB Debugging enabled).")
 		fmt.Println("  • Wi-Fi Mode: Type 'W' and press Enter to open Wireless Setup Wizard." + ui.ColorReset)
+		savedWiFiList := adb.LoadWiFiHistory()
+		lastWiFi := adb.GetLastWiFiAddress()
+		if lastWiFi != "" {
+			fmt.Printf(ui.ColorCyan+"  • Auto-Detect: Searching for remembered Wi-Fi target (%s)...\n"+ui.ColorReset, lastWiFi)
+		}
 		fmt.Println()
 
 		var connectedSerial string
 
 		ticker := time.NewTicker(1500 * time.Millisecond)
+		loopCount := 0
 		for {
 			serial, state := adb.CheckDeviceState()
 
@@ -449,11 +532,27 @@ func main() {
 			} else if state == "device" {
 				connectedSerial = serial
 				ticker.Stop()
+				if strings.Contains(connectedSerial, ":") {
+					adb.SaveWiFiHistory(connectedSerial)
+				}
 				break
 			} else {
 				dots := strings.Repeat(".", int(time.Now().Unix()%4))
 				fmt.Printf("\r%s[🔍] Scanning for phone (USB / Wi-Fi)%s%-4s%s [Press 'W' + Enter for Wi-Fi]: ", ui.ColorCyan, ui.ColorBold, dots, ui.ColorReset)
 			}
+
+			// Automatically attempt non-blocking connection to remembered Wi-Fi target
+			if loopCount%2 == 0 && len(savedWiFiList) > 0 {
+				go func(targets []string) {
+					for _, addr := range targets {
+						out, _ := adb.ConnectWiFi(addr)
+						if strings.Contains(out, "connected to") {
+							break
+						}
+					}
+				}(savedWiFiList)
+			}
+			loopCount++
 
 			select {
 			case inp := <-ui.InputChan:
@@ -467,6 +566,11 @@ func main() {
 					fmt.Println(ui.ColorYellow + ui.ColorBold + "[⏳] Waiting for a Xiaomi / Redmi / POCO phone..." + ui.ColorReset)
 					fmt.Println(ui.ColorGray + "  • USB Mode:   Connect phone via USB cable (USB Debugging enabled).")
 					fmt.Println("  • Wi-Fi Mode: Type 'W' and press Enter to open Wireless Setup Wizard." + ui.ColorReset)
+					savedWiFiList = adb.LoadWiFiHistory()
+					lastWiFi = adb.GetLastWiFiAddress()
+					if lastWiFi != "" {
+						fmt.Printf(ui.ColorCyan+"  • Auto-Detect: Searching for remembered Wi-Fi target (%s)...\n"+ui.ColorReset, lastWiFi)
+					}
 					fmt.Println()
 					ticker = time.NewTicker(1500 * time.Millisecond)
 				}

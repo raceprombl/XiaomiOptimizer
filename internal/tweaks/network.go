@@ -129,6 +129,7 @@ func RunEnableWirelessADB(serial *string) {
 	if strings.Contains(out, "connected to") {
 		fmt.Println(ui.ColorGreen + "[✓ Connected]" + ui.ColorReset)
 		*serial = target
+		adb.SaveWiFiHistory(target)
 		fmt.Println(ui.ColorGreen + ui.ColorBold + "\n[🎉] WIRELESS ADB ACTIVATED!" + ui.ColorReset)
 		fmt.Println(ui.ColorCyan + "[i] You can now safely UNPLUG the USB cable." + ui.ColorReset)
 		fmt.Println(ui.ColorCyan + "[i] XiOptimizer will continue operating fully wirelessly over Wi-Fi." + ui.ColorReset)
